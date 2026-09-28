@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks commits that would publish player data. Enable once per clone with:
+#     git config core.hooksPath .githooks
+python scripts/check_no_player_data.py --staged || python3 scripts/check_no_player_data.py --staged

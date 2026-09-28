@@ -1,0 +1,599 @@
+{
+  "activePlayer": {
+    "abilities": {
+      "E": {
+        "abilityLevel": 1,
+        "displayName": "Beat Drop",
+        "id": "SeraphineE",
+        "rawDescription": "GeneratedTip_Spell_SeraphineE_Description",
+        "rawDisplayName": "GeneratedTip_Spell_SeraphineE_DisplayName"
+      },
+      "Passive": {
+        "displayName": "Stage Presence",
+        "id": "SeraphinePassive",
+        "rawDescription": "GeneratedTip_Passive_SeraphinePassive_Description",
+        "rawDisplayName": "GeneratedTip_Passive_SeraphinePassive_DisplayName"
+      },
+      "Q": {
+        "abilityLevel": 1,
+        "displayName": "High Note",
+        "id": "SeraphineQ",
+        "rawDescription": "GeneratedTip_Spell_SeraphineQ_Description",
+        "rawDisplayName": "GeneratedTip_Spell_SeraphineQ_DisplayName"
+      },
+      "R": {
+        "abilityLevel": 0,
+        "displayName": "Encore",
+        "id": "SeraphineR",
+        "rawDescription": "GeneratedTip_Spell_SeraphineR_Description",
+        "rawDisplayName": "GeneratedTip_Spell_SeraphineR_DisplayName"
+      },
+      "W": {
+        "abilityLevel": 1,
+        "displayName": "Surround Sound",
+        "id": "SeraphineW",
+        "rawDescription": "GeneratedTip_Spell_SeraphineW_Description",
+        "rawDisplayName": "GeneratedTip_Spell_SeraphineW_DisplayName"
+      }
+    },
+    "championStats": {
+      "abilityHaste": 10.0,
+      "abilityPower": 40.0,
+      "armor": 32.19499969482422,
+      "armorPenetrationFlat": 0.0,
+      "armorPenetrationPercent": 1.0,
+      "attackDamage": 54.42499923706055,
+      "attackRange": 525.0,
+      "attackSpeed": 0.6874375343322754,
+      "bonusArmorPenetrationPercent": 1.0,
+      "bonusMagicPenetrationPercent": 1.0,
+      "critChance": 0.0,
+      "critDamage": 200.0,
+      "currentHealth": 774.8308715820312,
+      "healShieldPower": 0.0,
+      "healthRegenRate": 1.4769999980926514,
+      "lifeSteal": 0.0,
+      "magicLethality": 0.0,
+      "magicPenetrationFlat": 0.0,
+      "magicPenetrationPercent": 1.0,
+      "magicResist": 31.917499542236328,
+      "maxHealth": 774.8308715820312,
+      "moveSpeed": 330.0,
+      "omnivamp": 0.0,
+      "physicalLethality": 0.0,
+      "physicalVamp": 0.0,
+      "resourceMax": 719.0,
+      "resourceRegenRate": 3.969261884689331,
+      "resourceType": "MANA",
+      "resourceValue": 719.0,
+      "spellVamp": 0.0,
+      "tenacity": 5.0
+    },
+    "currentGold": 200.0,
+    "fullRunes": {},
+    "level": 3,
+    "riotId": "Red1#NA1",
+    "riotIdGameName": "Red1",
+    "riotIdTagLine": "NA1",
+    "summonerName": "Red1#NA1",
+    "teamRelativeColors": true
+  },
+  "allPlayers": [
+    {
+      "championName": "Ezreal",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 1,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Ezreal",
+      "rawSkinName": "game_character_skin_displayname_Ezreal_13",
+      "respawnTimer": 0.0,
+      "riotId": "Blue1#NA1",
+      "riotIdGameName": "Blue1",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 13,
+      "skinName": "Debonair Ezreal (Obsidian)",
+      "summonerName": "Blue1#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Barrier",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerBarrier_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerBarrier_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Kayn",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 1,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Kayn",
+      "rawSkinName": "game_character_skin_displayname_Kayn_4",
+      "respawnTimer": 0.0,
+      "riotId": "Blue2#NA1",
+      "riotIdGameName": "Blue2",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 4,
+      "skinName": "Odyssey Kayn (Pearl)",
+      "summonerName": "Blue2#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Ghost",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerHaste_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerHaste_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Swain",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 1,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Swain",
+      "rawSkinName": "game_character_skin_displayname_Swain_32",
+      "respawnTimer": 0.0,
+      "riotId": "Blue3#NA1",
+      "riotIdGameName": "Blue3",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 32,
+      "skinName": "Chosen of the Wolf Swain",
+      "summonerName": "Blue3#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Mark",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerSnowball_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerSnowball_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Fiddlesticks",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 1,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Fiddlesticks",
+      "rawSkinName": "game_character_skin_displayname_FiddleSticks_4",
+      "respawnTimer": 0.0,
+      "riotId": "Blue4#NA1",
+      "riotIdGameName": "Blue4",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 4,
+      "skinName": "Pumpkinhead Fiddlesticks",
+      "summonerName": "Blue4#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Ghost",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerHaste_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerHaste_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Leona",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 1,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Leona",
+      "rawSkinName": "game_character_skin_displayname_Leona_8",
+      "respawnTimer": 0.0,
+      "riotId": "Blue5#NA1",
+      "riotIdGameName": "Blue5",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 8,
+      "skinName": "PROJECT: Leona",
+      "summonerName": "Blue5#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Mark",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerSnowball_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerSnowball_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "ORDER"
+    },
+    {
+      "championName": "Seraphine",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": false,
+          "consumable": false,
+          "count": 1,
+          "displayName": "Lost Chapter",
+          "itemID": 3802,
+          "price": 250,
+          "rawDescription": "GeneratedTip_Item_3802_Description",
+          "rawDisplayName": "Item_3802_Name",
+          "slot": 0
+        }
+      ],
+      "level": 3,
+      "position": "NONE",
+      "rawChampionName": "Character_Seraphine_Name",
+      "rawSkinName": "game_character_skin_displayname_Seraphine_4",
+      "respawnTimer": 0.0,
+      "riotId": "Red1#NA1",
+      "riotIdGameName": "Red1",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 4,
+      "skinName": "Graceful Phoenix Seraphine",
+      "summonerName": "Red1#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Ghost",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerHaste_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerHaste_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    },
+    {
+      "championName": "Sivir",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 3,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Sivir",
+      "rawSkinName": "game_character_skin_displayname_Sivir_70",
+      "respawnTimer": 0.0,
+      "riotId": "Red2#NA1",
+      "riotIdGameName": "Red2",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 70,
+      "skinName": "Ann-Sivir-sary",
+      "summonerName": "Red2#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Ignite",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerDot_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerDot_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    },
+    {
+      "championName": "Skarner",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 3,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Skarner",
+      "rawSkinName": "game_character_skin_displayname_Skarner_1",
+      "respawnTimer": 0.0,
+      "riotId": "Red3#NA1",
+      "riotIdGameName": "Red3",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 1,
+      "skinName": "Sandscourge Skarner",
+      "summonerName": "Red3#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Clarity",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerMana_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerMana_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    },
+    {
+      "championName": "Azir",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 3,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Azir",
+      "rawSkinName": "game_character_skin_displayname_Azir_19",
+      "respawnTimer": 0.0,
+      "riotId": "Red4#NA1",
+      "riotIdGameName": "Red4",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 19,
+      "skinName": "Attorney Azir",
+      "summonerName": "Red4#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Mark",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerSnowball_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerSnowball_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    },
+    {
+      "championName": "Veigar",
+      "isBot": false,
+      "isDead": false,
+      "items": [
+        {
+          "canUse": true,
+          "consumable": true,
+          "count": 1,
+          "displayName": "Poro-Snax",
+          "itemID": 2052,
+          "price": 0,
+          "rawDescription": "GeneratedTip_Item_2052_Description",
+          "rawDisplayName": "Item_2052_Name",
+          "slot": 6
+        }
+      ],
+      "level": 3,
+      "position": "NONE",
+      "rawChampionName": "game_character_displayname_Veigar",
+      "rawSkinName": "game_character_skin_displayname_Veigar_4",
+      "respawnTimer": 0.0,
+      "riotId": "Red5#NA1",
+      "riotIdGameName": "Red5",
+      "riotIdTagLine": "NA1",
+      "runes": null,
+      "scores": {
+        "assists": 0,
+        "creepScore": 0,
+        "deaths": 0,
+        "kills": 0,
+        "wardScore": 0.0
+      },
+      "skinID": 4,
+      "skinName": "Leprechaun Veigar",
+      "summonerName": "Red5#NA1",
+      "summonerSpells": {
+        "summonerSpellOne": {
+          "displayName": "Ghost",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerHaste_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerHaste_DisplayName"
+        },
+        "summonerSpellTwo": {
+          "displayName": "Flash",
+          "rawDescription": "GeneratedTip_SummonerSpell_SummonerFlash_Description",
+          "rawDisplayName": "GeneratedTip_SummonerSpell_SummonerFlash_DisplayName"
+        }
+      },
+      "team": "CHAOS"
+    }
+  ],
+  "events": {
+    "Events": [
+      {
+        "EventID": 0,
+        "EventName": "GameStart",
+        "EventTime": 0.027795299887657166
+      }
+    ]
+  },
+  "gameData": {
+    "gameMode": "KIWI",
+    "gameTime": 30.52654266357422,
+    "mapName": "Map12",
+    "mapNumber": 12,
+    "mapTerrain": "Default"
+  }
+}

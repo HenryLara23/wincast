@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# NOTHING THAT IDENTIFIES A PLAYER GOES IN THIS REPO.
+#
+# Every tool here writes its outputs under a `data/` directory: captures of live
+# games, match lookups, the collector's databases, feature tables, reports. Those
+# hold other people's Riot IDs, PUUIDs and match records, and Riot's developer
+# policies do not allow redistributing identifiable player data. So `data/` is
+# ignored at EVERY depth -- deliberately unanchored -- and no code package may be
+# called `data` (see lolmodel/lolwp/store/__init__.py for why).
+#
+# What IS publishable lives outside data/:
+#   src/wincast/resources/   the fallback model (coefficients only) and Data Dragon prices
+#   tests/fixtures/          ANONYMISED games only (Blue1#NA1 ... Red5#NA1)
+#   docs/                    write-ups and curated charts
+#
+# `scripts/check_no_player_data.py` backs this up as a pre-commit hook:
+#     git config core.hooksPath .githooks
+# ---------------------------------------------------------------------------
+
+data/
+_to_delete/
+
+# data formats that should never be committed even outside data/
+*.sqlite
+*.sqlite-journal
+*.db
+*.parquet
+*.jsonl
+*.jsonl.gz
+*.log
+*.lock
+
+# secrets
+.env
+*.env
+!.env.example
+config.local.*
+
+# build output
+build/
+dist/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# ad-hoc live API dumps at the repo root
+/sample*.json

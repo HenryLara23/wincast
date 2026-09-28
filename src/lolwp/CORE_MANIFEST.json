@@ -1,0 +1,20 @@
+{
+  "source_repo": "wincast-model (private)",
+  "source_commit": "e26cf5f14e7ded53319e32dbbbd2a529457a997b",
+  "synced_utc": "2026-09-28T00:48:46Z",
+  "feature_set_version": "1.2.0",
+  "files": {
+    "features/spec.py": "be564cb15029326ee131808dc5f5133e7dd387a9ee929442e2475c798499494d",
+    "features/constants.py": "c4885a850a5d22a5eb809a5c240377261da4b96108b75d83f615d02276368c57",
+    "features/assemble.py": "9873ed502ab05c0f2a24659524cb11534821a2dd6f435a3be4cc96ab216b481c",
+    "features/live_features.py": "5cea1ac8d7c118df293bd617523af5638040f76c02a77128b0e4ff2a7135d4cd",
+    "store/items_db.py": "1148acbfe57d3cb2bc7faf1631ec465f8930124e5fea235298c526944690904b",
+    "model/bundle.py": "bcfbdf6bc3ce881b9cca497174fdae16a0a42da8812d5d1ca11c0a1fa82b6a19"
+  },
+  "fallback_model": {
+    "name": "lolwp_16.18_20260927-0157",
+    "patch": "16.18",
+    "sha256": "1a621df83ec0e53d1374be7304e68cebe06c3a568e006595d7cd9e2a05b20188"
+  },
+  "ddragon_items": "16.18.1"
+}

@@ -1,0 +1,5 @@
+# Everything Wincast needs to run. Or: pip install -e .[ui,dev]
+numpy>=1.24
+requests>=2.28
+PySide6>=6.6
+pytest>=7
