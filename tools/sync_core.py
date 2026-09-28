@@ -66,11 +66,15 @@ def sha256(path):
 
 
 def git_commit(src):
+    # GIT_OPTIONAL_LOCKS=0: `git status` otherwise refreshes the index and takes
+    # .git/index.lock in the MODEL repo, which a sandboxed or interrupted run can
+    # leave behind -- and then every git command there fails.
+    env = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
     try:
         rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=src, capture_output=True,
-                             text=True, check=True).stdout.strip()
+                             text=True, check=True, env=env).stdout.strip()
         dirty = subprocess.run(["git", "status", "--porcelain", "--", "."], cwd=src,
-                               capture_output=True, text=True, check=True).stdout.strip()
+                               capture_output=True, text=True, check=True, env=env).stdout.strip()
         return rev + ("+dirty" if dirty else "")
     except Exception:
         return "unknown"
@@ -172,10 +176,28 @@ def build_golden(src, capture, model_path, items_version):
                 continue
             t = float(g.get("gameTime") or 0.0)
             if t >= next_t:
-                snaps.append(anon.anonymize(copy.deepcopy(data))[0])
+                snaps.append(copy.deepcopy(data))
                 next_t = t + GOLDEN_EVERY_S
     if len(snaps) < 5:
         raise SystemExit(f"{capture} has only {len(snaps)} usable snapshots")
+
+    # One name mapping for the whole game. The live API does not keep allPlayers
+    # in a fixed order between snapshots, so numbering each snapshot on its own
+    # (what anonymize() does) would turn Red1 into a different player every 90 s.
+    order = copy.deepcopy(snaps[0])
+    order["allPlayers"].sort(key=lambda p: (p.get("team", ""), p.get("championName", "")))
+    mapping = anon.build_mapping(order)
+    for data in snaps:
+        for p in data.get("allPlayers") or []:
+            anon.scrub_player(p, mapping)
+        if isinstance(data.get("activePlayer"), dict):
+            anon.scrub_player(data["activePlayer"], mapping)
+        for e in (data.get("events") or {}).get("Events") or []:
+            for key in anon.EVENT_NAME_FIELDS:
+                if isinstance(e.get(key), str) and e[key] in mapping:
+                    e[key] = mapping[e[key]]
+            if isinstance(e.get("Assisters"), list):
+                e["Assisters"] = [mapping.get(n, "anonymous") for n in e["Assisters"]]
 
     fd, tmp = tempfile.mkstemp(suffix=".json")       # outside the repo
     with os.fdopen(fd, "w", encoding="utf-8") as fh:

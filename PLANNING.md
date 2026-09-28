@@ -22,23 +22,44 @@ model repo are private and frozen except for bugs or a major game change.
 ## Phase 5 — Scoring loop
 
 - [x] Vendored core (6 files) + fallback model + bundled Data Dragon prices (16.18.1)
-- [x] `python -m wincast --headless` (port of `play.py`), live or `--replay`
+- [x] `python -m wincast --headless`, live or `--replay`, now on the same engine as the overlay
 - [x] SR gate: map 11, CLASSIC, 10 players, no bots (ARAM fixture refused in tests)
 - [x] Golden-game test against the model repo's own output
-- [ ] Game state machine as a Qt-free class: no game → loading → in game → ended
-- [ ] Poll off the UI thread (QThread / worker), emit (game_time, p_mine, team)
-- [ ] Smoothing of the displayed number (B-D7): EMA with a short time constant, reset on game start
-- [ ] Verify TLS with Riot's `riotgames.pem` instead of `verify=False` (do it in Wincast's own fetch, not the vendored file)
-- [ ] Model resolved once at game start, never swapped mid-game
+- [x] `client.py`: one `/allgamedata` call per poll, sorted into OFFLINE / LOADING / DATA / ERROR
+- [x] `session.py`: Qt-free engine. States no game → loading → unsupported / in game → ended (with Win/Lose from `GameEnd`)
+  - game identity = roster, so a crash + reconnect resumes the same game (curve, smoothing, model)
+  - model + item prices resolved once per game, never swapped mid-game (`resolver.py`)
+  - transient errors hold the last update; a bad snapshot keeps the last good number
+  - the whole game's curve is kept (`Game.curve`) for the History tab later
+- [x] `smoothing.py`: EMA over game time in log-odds, tau 5 s default (`--smoothing 0` = raw). Pauses freeze it.
+- [x] `worker.py`: `ScoringRunner` runs the engine on a QThread (2 s in game, 5 s idle); signals `updated`, `stateChanged`, `gameStarted`, `gameEnded`, `failed`, all delivered on the UI thread; clean `stop()`
+- [x] TLS: verifies with `src/wincast/resources/riotgames.pem` (bundled, packaged via pyproject); falls back to unverified and says so if the check ever fails
+- [x] **First real game (2026-09-28):** TLS verified with riotgames.pem against 127.0.0.1; loading screen = HTTP 404 then data; side detected; smoothing looked right; a mid-game disconnect went to "will resume on reconnect". Game clock sits at 0:00 for ~30 s while players load (headless no longer repeats those lines).
+- [ ] Still to see in a real game: `GameEnd` Win/Lose, and an actual reconnect resuming the same game
+- [ ] Tune the smoothing constant by eye once the overlay exists
 
 ## Phase 6 — Overlay
 
-- [ ] Frameless, always-on-top, click-through pill (`WS_EX_LAYERED | WS_EX_TRANSPARENT`)
-- [ ] Number coloured for your side; optional tiny trend line (last few minutes)
-- [ ] Global hotkey `Ctrl+Shift+O` lock/unlock; drag when unlocked; position saved per monitor
-- [ ] Hidden / "—" outside a supported game
-- [ ] Test in Borderless; document that exclusive fullscreen hides it
-- [ ] Plain separate window only. No hooks, no injection (Vanguard)
+- [x] `ui/overlay.py`: frameless, always-on-top, no taskbar entry, never takes focus; click-through when locked (`WindowTransparentForInput` = `WS_EX_LAYERED | WS_EX_TRANSPARENT`)
+- [x] Number coloured by the chance itself (red → grey → green, saturating at 20/80%) + 4-minute trend line. Caption and bar removed after the first in-game test ("fluff"); pill is 150×46. "Victory"/"Defeat" replaces the trend at game end; the unlock hint is a tooltip
+- [x] Shown only while scoring or just ended ("Victory"/"Defeat"); hidden otherwise; always shown while unlocked
+- [x] `ui/hotkey.py`: global `Ctrl+Shift+P` via RegisterHotKey on a hidden helper window. Does not fire while League has focus (tested); accepted: unlock from the desktop or tray, position is remembered. (A GetAsyncKeyState poller was tried and dropped: not wanted.)
+- [x] Drag when unlocked (native `startSystemMove`); position saved per screen in QSettings, pulled back on-screen if a monitor went away; first launch starts unlocked
+- [x] Topmost re-asserted every 3 s on Windows (borderless games can push above)
+- [x] Minimal tray: move/lock, quit, tooltip with the current chance (Phase 7 grows it)
+- [x] `python -m wincast --replay capture --speed N` drives the overlay from a recording
+- [x] Log file `%LOCALAPPDATA%\Wincast\wincast.log` (the .exe has no console)
+- [x] **First .exe**: `tools/build_exe.py` (PyInstaller onedir, resources added explicitly and checked after the build). Frozen build verified end to end on Linux; **Windows build not yet run**
+- **Hand test on Windows, 2026-09-28** (`python -m wincast`, Borderless):
+  - [x] visible over the game; clicks go through it when locked
+  - [x] never steals focus when the number updates
+  - [x] looks right at Henry's display scaling (a resize option would be nice: Phase 7 setting)
+  - [x] hotkey works from the desktop, not while the game has focus (accepted)
+  - [ ] position remembered after restart
+  - [x] `Wincast.exe` from `dist/` works (Henry's PC)
+- [x] Trend window 10 min by default (was 4), and drawn on a log-odds scale (1%..99%) so it stays visible at 98%+ / 2%- (it flattened into the box edge before)
+- [x] `.exe` build tested by Henry: works
+- [ ] Settings for scale / opacity / trend on-off / trend minutes exist in QSettings (`overlay/scale`, `overlay/opacity`, `overlay/trend`, `overlay/trend_minutes`) but have no UI until Phase 7
 
 ## Phase 7 — Tray + main window
 

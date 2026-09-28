@@ -1,7 +1,7 @@
 {
   "source_repo": "wincast-model (private)",
   "source_commit": "e26cf5f14e7ded53319e32dbbbd2a529457a997b",
-  "synced_utc": "2026-09-28T00:48:46Z",
+  "synced_utc": "2026-09-28T01:47:14Z",
   "feature_set_version": "1.2.0",
   "files": {
     "features/spec.py": "be564cb15029326ee131808dc5f5133e7dd387a9ee929442e2475c798499494d",
