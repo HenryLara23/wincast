@@ -27,7 +27,7 @@ version = { attr = "wincast.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-wincast = ["resources/**/*.json", "resources/*.pem"]
+wincast = ["resources/**/*.json", "resources/*.pem", "resources/icon/*"]
 lolwp = ["CORE_MANIFEST.json"]
 
 [tool.pytest.ini_options]

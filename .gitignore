@@ -50,3 +50,6 @@ venv/
 
 # ad-hoc live API dumps at the repo root
 /sample*.json
+
+# full-size screenshots; the README uses the smaller copies in docs/screenshots/
+docs/screenshots/originals/

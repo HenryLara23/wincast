@@ -42,6 +42,7 @@ def main():
         "--noconfirm", "--clean",
         "--windowed",                         # no console window
         "--name", "Wincast",
+        "--icon", str(ROOT / "src" / "wincast" / "resources" / "icon" / "wincast.ico"),
         "--paths", str(ROOT / "src"),
         # the model, item prices and riotgames.pem. Listed explicitly: --collect-data
         # can't see a package that is only on --paths, and silently ships nothing.
@@ -57,7 +58,8 @@ def main():
     subprocess.run(cmd, check=True, cwd=ROOT)
     exe = ROOT / "dist" / "Wincast" / ("Wincast.exe" if sys.platform == "win32" else "Wincast")
     res = ROOT / "dist" / "Wincast" / "_internal" / "wincast" / "resources"
-    missing = [f for f in ("models/fallback.json", "riotgames.pem") if not (res / f).exists()]
+    needed = ("models/fallback.json", "riotgames.pem", "icon/wincast-16.png")
+    missing = [f for f in needed if not (res / f).exists()]
     if missing:
         raise SystemExit(f"build is missing bundled files: {missing}")
     print(f"\nbuilt {exe}")

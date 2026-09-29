@@ -35,8 +35,9 @@ model repo are private and frozen except for bugs or a major game change.
 - [x] `worker.py`: `ScoringRunner` runs the engine on a QThread (2 s in game, 5 s idle); signals `updated`, `stateChanged`, `gameStarted`, `gameEnded`, `failed`, all delivered on the UI thread; clean `stop()`
 - [x] TLS: verifies with `src/wincast/resources/riotgames.pem` (bundled, packaged via pyproject); falls back to unverified and says so if the check ever fails
 - [x] **First real game (2026-09-28):** TLS verified with riotgames.pem against 127.0.0.1; loading screen = HTTP 404 then data; side detected; smoothing looked right; a mid-game disconnect went to "will resume on reconnect". Game clock sits at 0:00 for ~30 s while players load (headless no longer repeats those lines).
-- [ ] Still to see in a real game: `GameEnd` Win/Lose, and an actual reconnect resuming the same game
-- [ ] Tune the smoothing constant by eye once the overlay exists
+- [x] `GameEnd` Win/Lose seen in real games (Victory recorded from the .exe)
+- [ ] Not yet seen in a real game: a reconnect resuming the same game; the `/eventdata` end-of-game fallback
+- [x] Smoothing constant: 5 s default accepted in play; adjustable in Settings
 
 ## Phase 6 — Overlay
 
@@ -59,7 +60,7 @@ model repo are private and frozen except for bugs or a major game change.
   - [x] `Wincast.exe` from `dist/` works (Henry's PC)
 - [x] Trend window 10 min by default (was 4), and drawn on a log-odds scale (1%..99%) so it stays visible at 98%+ / 2%- (it flattened into the box edge before)
 - [x] `.exe` build tested by Henry: works
-- [ ] Settings for scale / opacity / trend on-off / trend minutes exist in QSettings (`overlay/scale`, `overlay/opacity`, `overlay/trend`, `overlay/trend_minutes`) but have no UI until Phase 7
+- [x] Settings for scale / opacity / trend on-off / trend minutes: UI in Phase 7 (Settings tab)
 
 ## Phase 7 — Main window, history, settings
 
@@ -130,9 +131,6 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 - [x] Tests score with a frozen model/items (`tests/fixtures/golden_model.json`, `fixtures/ddragon/`) so
   swapping the built-in model can't break them. Rehearsed prepare → test → build → zip on Linux.
 - [x] 95 app tests; 9 publisher tests (lolmodel)
-- [ ] Henry: fine-grained token (Contents RW, wincast only) → `/srv/lol/release.env`; upload
-  `publish_release.py` + the three unit files; `--dry-run`; first upload creates `models-16.19` → which
-  starts the first app build (`v16.19`, with the repo's 16.18 model)
 - [x] Server set up and first upload done (2026-09-29): `models-16.19` holds `model-16.19-20260929-0204.fs1.2.0.json`
 - [x] First Actions run (manual, 16.19) failed after ~1 min; likely cause: Windows checkout turned LF into CRLF,
   so the byte-exact manifest test failed. Fix: `.gitattributes` (`-text` for vendored code, resources,
@@ -140,17 +138,35 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 - [x] Second run failed the same way: in `.gitattributes` the LAST matching line wins, and `* text=auto`
   was last, overriding `-text`. Reordered (catch-all first, `* text=auto eol=lf`). Verified by cloning with
   `core.autocrlf=true core.eol=crlf`: all hashes match after the fix, all six differed before.
-- [ ] Re-run → v16.19 published; then Check Now from the released .exe
+- [x] **v16.19 published by GitHub Actions** (2026-09-29, 59 MB zip); the released .exe found and installed
+  `lolwp_16.19_20260929-0204` via Check Now. Full loop proven: server → models release → app release → app update.
+- [ ] Not yet proven: the AUTOMATIC trigger (server creates `models-16.20` → Actions builds v16.20). v16.19 was
+  started by hand because the workflow wasn't pushed yet when `models-16.19` was created. Watch it at 16.20.
 - [ ] (later) warn when the newest model's patch is behind Riot's current patch
+
+## Loose ends (audit 2026-09-29)
+
+- [ ] Commit the private repo's Phase 8 server changes (`lolmodel/scripts/publish_release.py`, its test,
+  `deploy/lolwp-publish.{service,timer}`, `deploy/lolwp-train.timer`, `deploy/README.md`, root `.gitignore`).
+  The server already runs them; the repo doesn't have them yet.
+- [ ] Fine-grained token expiry: when it lapses, the daily upload fails quietly (`journalctl -u lolwp-publish`).
+  Set a reminder a week before; renew and paste into `/srv/lol/release.env`.
+- [x] Root `planning.md` (monorepo) header updated to point at wincast/PLANNING.md
+- [ ] Dev-only: Microsoft Store Python keeps a separate AppData (history, log) from the .exe. Not a user issue.
 
 ## Phase 9 — Packaging & release
 
 - [x] PyInstaller single-folder build (`tools/build_exe.py`), works on Henry's PC
 - [x] Zip per release, built by GitHub Actions (Phase 8)
-- [ ] App icon file (.ico) for the .exe and the zip; installer maybe later
+- [x] App icon: "W as a graph" (tools/make_icon.py -> resources/icon/; .exe, window, tray). Installer icon comes with the installer
+- [ ] **Installer + uninstaller** (Inno Setup, built by the release workflow next to the zip):
+  Program Files install, Start-menu shortcut, "Apps & features" entry with an uninstaller that also removes
+  the start-with-Windows registry value; asks whether to keep the user's history/models/settings
+- [x] README screenshots: Live, overlay (+ close-up), History, Models (docs/screenshots/)
 - [x] Licence: MIT
-- [ ] Register the product with Riot's developer portal before publishing a binary
-- [ ] README screenshots, privacy statement, "not endorsed by Riot" line (done in README)
+- [ ] Register with Riot's developer portal as a **Production** product (the public app runs on models trained from
+  Match-v5 data the collector gathers). Applied 2026-09-28; next: riot.txt on GitHub Pages, then Verify URL
+- [x] Privacy statement and "not endorsed by Riot" line (README, release notes, About box)
 
 ## Risks
 

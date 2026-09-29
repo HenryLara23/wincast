@@ -9,8 +9,29 @@ A live win-chance overlay for League of Legends, Summoner's Rift.
 * **Shows only what you could already see.** The Live Client API exposes the
   same information as the in-game scoreboard; Wincast turns it into one number.
 
-> Status: early development. Overlay, main window (Live / History / Settings)
-> and the .exe work. See [PLANNING.md](PLANNING.md).
+## Screenshots
+
+![The Live tab: win chance now and how it got there](docs/screenshots/live-tab.png)
+
+*The Live tab during a game: the chance dipped below 50% around 4 minutes, then climbed back to 73%.*
+
+![The overlay in game](docs/screenshots/overlay-in-game.jpg)
+
+<img src="docs/screenshots/overlay-closeup.png" width="300" alt="The overlay up close: 71% and a short trend line">
+
+*In game, the overlay is a small pill (enlarged above): the chance your team wins, and its trend over the last
+10 minutes. It ignores the mouse, so it never gets in the way.*
+
+<p>
+  <img src="docs/screenshots/history-zoomed.png" width="49%" alt="The History tab">
+  <img src="docs/screenshots/models-tab.png" width="49%" alt="The Models tab">
+</p>
+
+*Left: every game is saved with its curve, result and objectives by team; drag to zoom in. Right: the models
+Wincast has; the next game uses the newest one unless you pin another.*
+
+> Status: early development. Overlay, main window (Live / History / Settings / Models),
+> model updates and the .exe work. See [PLANNING.md](PLANNING.md).
 
 ## Run it
 
@@ -82,7 +103,7 @@ docs/                   Live Client API reference, original design review
 
 The Models tab lists the models Wincast has, and which one the next game uses:
 the newest, unless you pin one. New models are published as releases on this
-repo (tags `model-<patch>-…`); **Check Now** finds and installs them, or turn on
+repo (tags `models-<patch>`); **Check Now** finds and installs them, or turn on
 the startup check. A model is never swapped mid-game.
 
 ## How the model gets here

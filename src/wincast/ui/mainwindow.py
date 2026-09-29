@@ -283,11 +283,12 @@ class MainWindow(QMainWindow):
                         'D dragon &middot; B baron &middot; H herald &middot; G grubs &middot; '
                         'T tower &middot; I inhibitor &middot; ticks = kills')
         legend.setTextFormat(Qt.TextFormat.RichText)
+        legend.setWordWrap(True)                   # own row, wraps on narrow windows
+        gl.addWidget(legend)
         zoom_row = QHBoxLayout()
-        zoom_row.addWidget(legend, 1)
-        hint = QLabel("Drag to zoom \u00b7 wheel zooms \u00b7 right-click back")
+        hint = QLabel("Drag or scroll to zoom \u00b7 right-click to go back")
         hint.setEnabled(False)                     # greyed, like a hint
-        zoom_row.addWidget(hint)
+        zoom_row.addWidget(hint, 1)
         self.btn_zoom_back = QPushButton("&Back")
         self.btn_zoom_home = QPushButton("H&ome")
         for b in (self.btn_zoom_back, self.btn_zoom_home):

@@ -6,10 +6,20 @@ from PySide6.QtCore import QObject, QRectF, Qt, Slot
 from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from ..paths import RESOURCES
 from ..session import ENDED, IN_GAME, LOADING_STATE, UNSUPPORTED
 
 
 def app_icon() -> QIcon:
+    """The Wincast icon ("W as a graph"), every size so Qt picks a sharp one."""
+    icon = QIcon()
+    for png in sorted((RESOURCES / "icon").glob("wincast-*.png")):
+        icon.addFile(str(png))
+    return icon if not icon.isNull() else _drawn_icon()
+
+
+def _drawn_icon() -> QIcon:
+    """Fallback if the icon files are missing: a plain W in a circle."""
     pm = QPixmap(64, 64)
     pm.fill(Qt.GlobalColor.transparent)
     qp = QPainter(pm)
