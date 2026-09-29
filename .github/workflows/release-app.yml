@@ -3,10 +3,12 @@
 # Starts automatically when the server creates the release `models-<patch>` for a
 # new patch (the first day that patch's model is good enough to publish). Builds
 # Wincast <patch> with the PREVIOUS patch's last published model built in, runs the
-# tests, and publishes the release `v<patch>` (marked Latest) with the zip.
+# tests, and publishes the release `v<patch>` (marked Latest) with the installer
+# (setup.exe), the zip and SHA256SUMS.
 #
 # Can also be started by hand: Actions > Release app > Run workflow > patch.
-# Does nothing if v<patch> already exists.
+# Does nothing if v<patch> already exists. Tick "Test build only" to build
+# without publishing: the files appear under the run's Artifacts instead.
 
 name: Release app
 
@@ -18,6 +20,10 @@ on:
       patch:
         description: "Patch to release for, e.g. 16.20"
         required: true
+      test_build:
+        description: "Test build only: don't publish, attach the files to the run"
+        type: boolean
+        default: false
 
 permissions:
   contents: write            # create the v<patch> release
@@ -46,11 +52,12 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
           INPUT: ${{ inputs.patch }}
+          TEST: ${{ inputs.test_build }}
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then P="${TAG#models-}"; else P="$INPUT"; fi
           if ! [[ "$P" =~ ^[0-9]+\.[0-9]+$ ]]; then echo "not a patch: $P"; exit 1; fi
           echo "patch=$P" >> "$GITHUB_OUTPUT"
-          if gh release view "v$P" >/dev/null 2>&1; then
+          if [ "$TEST" != "true" ] && gh release view "v$P" >/dev/null 2>&1; then
             echo "v$P already exists: nothing to do"
             echo "skip=1" >> "$GITHUB_OUTPUT"
           fi
@@ -84,14 +91,29 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python -m pytest -q
 
-      - name: Build Wincast.exe
+      # always install/upgrade: the script needs Inno Setup 6.3+ (x64compatible)
+      - name: Inno Setup
         if: steps.patch.outputs.skip != '1'
-        run: python tools/build_exe.py --zip
+        run: choco upgrade innosetup -y --no-progress
+
+      - name: Build Wincast.exe, zip and installer
+        if: steps.patch.outputs.skip != '1'
+        run: python tools/build_exe.py --zip --installer
+
+      - name: Keep test build
+        if: steps.patch.outputs.skip != '1' && inputs.test_build
+        uses: actions/upload-artifact@v4
+        with:
+          name: wincast-${{ steps.patch.outputs.patch }}-test
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+            dist/SHA256SUMS
 
       - name: Publish v${{ steps.patch.outputs.patch }}
-        if: steps.patch.outputs.skip != '1'
+        if: steps.patch.outputs.skip != '1' && !inputs.test_build
         shell: bash
         run: |
           P="${{ steps.patch.outputs.patch }}"
-          gh release create "v$P" "dist/Wincast-$P-win64.zip" dist/SHA256SUMS \
+          gh release create "v$P" "dist/Wincast-$P-setup.exe" "dist/Wincast-$P-win64.zip" dist/SHA256SUMS \
             --title "Wincast $P" --notes-file build/release-notes.md --latest

@@ -47,6 +47,8 @@ class TestPrepareRelease(unittest.TestCase):
         self.assertIn("patch **16.19**", notes)
         self.assertIn("trained on patch 16.18", notes)
         self.assertIn("Wincast-16.19-win64.zip", notes)
+        self.assertIn("Wincast-16.19-setup.exe", notes)
+        self.assertIn("More info", notes)
 
     def test_refuses_a_bad_model_and_a_bad_version(self):
         m = self.root / "m.json"

@@ -159,9 +159,11 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 - [x] PyInstaller single-folder build (`tools/build_exe.py`), works on Henry's PC
 - [x] Zip per release, built by GitHub Actions (Phase 8)
 - [x] App icon: "W as a graph" (tools/make_icon.py -> resources/icon/; .exe, window, tray). Installer icon comes with the installer
-- [ ] **Installer + uninstaller** (Inno Setup, built by the release workflow next to the zip):
-  Program Files install, Start-menu shortcut, "Apps & features" entry with an uninstaller that also removes
-  the start-with-Windows registry value; asks whether to keep the user's history/models/settings
+- [x] **Installer + uninstaller** (`installer/wincast.iss`, Inno Setup; built by the release workflow next to
+  the zip): per-user install by default (`%LOCALAPPDATA%\Programs\Wincast`, no admin), "all users" option,
+  Start-menu shortcut, optional desktop icon, uninstaller removes the start-with-Windows value and asks whether
+  to delete history/models/settings. **Not yet tried on a real PC**: run a test build (Actions > Release app >
+  Test build only) and install/uninstall it once
 - [x] README screenshots: Live, overlay (+ close-up), History, Models (docs/screenshots/)
 - [x] Licence: MIT
 - [ ] Register with Riot's developer portal as a **Production** product (the public app runs on models trained from

@@ -5,6 +5,10 @@ Build Wincast.exe (Windows) with PyInstaller.
     pip install -e .[ui,build]
     python tools/build_exe.py            # -> dist/Wincast/Wincast.exe
     python tools/build_exe.py --zip      # also dist/Wincast-<version>-win64.zip
+    python tools/build_exe.py --zip --installer   # and dist/Wincast-<version>-setup.exe
+
+The installer needs Inno Setup 6.3+ (https://jrsoftware.org/isinfo.php, or
+`choco install innosetup`); set ISCC to its ISCC.exe if it isn't found.
 
 A folder build ("onedir"), not a single file: it starts faster, and one-file
 builds unpack themselves to a temp folder on every launch, which antivirus
@@ -31,6 +35,7 @@ def version():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--zip", action="store_true", help="also zip the folder for sharing")
+    ap.add_argument("--installer", action="store_true", help="also build the setup.exe (Inno Setup)")
     args = ap.parse_args()
     try:
         import PyInstaller  # noqa: F401
@@ -63,13 +68,44 @@ def main():
     if missing:
         raise SystemExit(f"build is missing bundled files: {missing}")
     print(f"\nbuilt {exe}")
+    shipped = []
     if args.zip:
         out = shutil.make_archive(str(ROOT / "dist" / f"Wincast-{version()}-win64"), "zip",
                                   ROOT / "dist", "Wincast")
+        shipped.append(Path(out))
+        print(f"zipped {out}")
+    if args.installer:
+        shipped.append(build_installer())
+    if shipped:
         import hashlib
-        digest = hashlib.sha256(Path(out).read_bytes()).hexdigest()
-        (ROOT / "dist" / "SHA256SUMS").write_text(f"{digest}  {Path(out).name}\n", encoding="utf-8")
-        print(f"zipped {out}\nchecksum in dist/SHA256SUMS")
+        lines = [f"{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.name}\n" for f in shipped]
+        (ROOT / "dist" / "SHA256SUMS").write_text("".join(lines), encoding="utf-8")
+        print("checksums in dist/SHA256SUMS")
+
+
+def find_iscc():
+    env = os.environ.get("ISCC")
+    if env:
+        return env
+    found = shutil.which("ISCC") or shutil.which("iscc")
+    if found:
+        return found
+    for base in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"),
+                 os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")):
+        if base and (Path(base) / "Inno Setup 6" / "ISCC.exe").exists():
+            return str(Path(base) / "Inno Setup 6" / "ISCC.exe")
+    raise SystemExit("Inno Setup's ISCC.exe not found: install Inno Setup 6 or set ISCC")
+
+
+def build_installer() -> Path:
+    cmd = [find_iscc(), "/Qp", f"/DAppVersion={version()}", str(ROOT / "installer" / "wincast.iss")]
+    print(" ".join(cmd))
+    subprocess.run(cmd, check=True, cwd=ROOT)
+    out = ROOT / "dist" / f"Wincast-{version()}-setup.exe"
+    if not out.exists():
+        raise SystemExit(f"installer not built: {out}")
+    print(f"installer {out}")
+    return out
 
 
 if __name__ == "__main__":

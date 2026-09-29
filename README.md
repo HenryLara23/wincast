@@ -33,7 +33,22 @@ Wincast has; the next game uses the newest one unless you pin another.*
 > Status: early development. Overlay, main window (Live / History / Settings / Models),
 > model updates and the .exe work. See [PLANNING.md](PLANNING.md).
 
-## Run it
+## Install
+
+Download from the [Releases page](https://github.com/HenryLara23/wincast/releases/latest):
+
+* **`Wincast-<version>-setup.exe`** (most people): run it and follow the steps. It installs
+  for your Windows account only, so it doesn't need admin rights (there's an "all users" option),
+  adds a Start menu entry and uninstalls from Settings > Apps like any other program.
+* **`Wincast-<version>-win64.zip`** (no install): unzip it anywhere and run `Wincast.exe`.
+
+**"Windows protected your PC"?** Wincast isn't code-signed, so Windows SmartScreen warns
+about it like any new unsigned app. Click **More info**, then **Run anyway**.
+
+Set the game to **Borderless** or Windowed mode, start a game, and the overlay appears.
+**Ctrl+Shift+P** unlocks it so you can drag it somewhere else.
+
+## Run from source
 
 ```bash
 pip install -e .[ui,dev]
@@ -53,7 +68,8 @@ the connection to the game is verified.
 
 ## Releases
 
-* **`v<patch>`** (e.g. `v16.20`, marked Latest): the app, `Wincast-16.20-win64.zip`.
+* **`v<patch>`** (e.g. `v16.20`, marked Latest): the app, as `Wincast-16.20-setup.exe`
+  and `Wincast-16.20-win64.zip`.
   Built automatically by GitHub Actions when a new patch's models appear, with the
   previous patch's best model built in.
 * **`models-<patch>`**: that patch's models, one file per day
@@ -62,7 +78,9 @@ the connection to the game is verified.
   Models > Import.
 
 Build locally (Windows): `pip install -e .[ui,build]` then
-`python tools/build_exe.py --zip`. Unsigned, so SmartScreen asks "Run anyway" once.
+`python tools/build_exe.py --zip`; add `--installer` for the setup.exe (needs
+[Inno Setup](https://jrsoftware.org/isinfo.php) 6.3+). To try the release build without
+publishing: Actions > Release app > Run workflow, tick "Test build only".
 
 ## Layout
 
@@ -91,7 +109,9 @@ src/wincast/            the app
 src/lolwp/              live scoring code, VENDORED from the model repo -- do not edit
   CORE_MANIFEST.json    source commit + SHA-256 of every vendored file
 tools/sync_core.py      re-pulls src/lolwp, the fallback model and the golden game
-tools/build_exe.py      PyInstaller build of Wincast.exe (+ zip and SHA256SUMS)
+tools/build_exe.py      PyInstaller build of Wincast.exe (+ zip, installer, SHA256SUMS)
+tools/make_icon.py      renders the app icon into resources/icon/
+installer/wincast.iss   Inno Setup script: per-user install, uninstaller
 tools/prepare_release.py, fetch_release_model.py   used by the release workflow
 .github/workflows/release-app.yml   builds and publishes v<patch> on a Windows runner
 tests/                  incl. test_golden.py: a real anonymised game re-scored
