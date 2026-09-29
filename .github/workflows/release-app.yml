@@ -34,7 +34,11 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
+      # keep files byte-exact on Windows (the manifest test checks hashes); see .gitattributes
+      - name: No line-ending conversion
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v5
 
       - name: Which patch
         id: patch
@@ -51,7 +55,7 @@ jobs:
             echo "skip=1" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.patch.outputs.skip != '1'
         with:
           python-version: "3.11"

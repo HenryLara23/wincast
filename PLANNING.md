@@ -133,7 +133,11 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 - [ ] Henry: fine-grained token (Contents RW, wincast only) → `/srv/lol/release.env`; upload
   `publish_release.py` + the three unit files; `--dry-run`; first upload creates `models-16.19` → which
   starts the first app build (`v16.19`, with the repo's 16.18 model)
-- [ ] Watch the first Actions run (Actions tab); then Check Now from the released .exe
+- [x] Server set up and first upload done (2026-09-29): `models-16.19` holds `model-16.19-20260929-0204.fs1.2.0.json`
+- [x] First Actions run (manual, 16.19) failed after ~1 min; likely cause: Windows checkout turned LF into CRLF,
+  so the byte-exact manifest test failed. Fix: `.gitattributes` (`-text` for vendored code, resources,
+  fixtures) + `core.autocrlf false` on the runner; actions bumped to checkout@v5 / setup-python@v6 (Node 24)
+- [ ] Re-run → v16.19 published; then Check Now from the released .exe
 - [ ] (later) warn when the newest model's patch is behind Riot's current patch
 
 ## Phase 9 — Packaging & release

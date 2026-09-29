@@ -1,0 +1,10 @@
+# Files that are checked byte for byte (CORE_MANIFEST.json hashes, SHA256SUMS,
+# the golden-game test) must never have their line endings changed by git.
+# Windows git (and GitHub's Windows runners) otherwise turn LF into CRLF on
+# checkout, and the vendored code then "differs" from what the model repo shipped.
+src/lolwp/**             -text
+src/wincast/resources/** -text
+tests/fixtures/**        -text
+
+# Everything else: normal text handling, LF in the repository
+*                        text=auto
