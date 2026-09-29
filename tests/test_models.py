@@ -153,6 +153,25 @@ class TestUpdates(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_app_is_old_only_after_the_next_seasons_first_patch(self):
+        import datetime
+        d = datetime.date
+        self.assertEqual(updates.season_year("16.19"), 2026)
+        self.assertFalse(updates.app_is_old("16.19", d(2026, 12, 31)))
+        self.assertFalse(updates.app_is_old("16.24", d(2027, 1, 14)))
+        self.assertTrue(updates.app_is_old("16.24", d(2027, 1, 15)))
+        self.assertTrue(updates.app_is_old("16.1", d(2028, 6, 1)))
+        self.assertFalse(updates.app_is_old("0.1.0.dev0", d(2099, 1, 1)))
+
+    def test_issue_url_is_prefilled(self):
+        url = updates.issue_url("16.19", "lolwp_16.19_x", "10 (10.0.19045)")
+        self.assertTrue(url.startswith("https://github.com/HenryLara23/wincast/issues/new?body="))
+        from urllib.parse import unquote
+        body = unquote(url.split("body=", 1)[1])
+        self.assertIn("Wincast 16.19", body)
+        self.assertIn("lolwp_16.19_x", body)
+        self.assertIn("wincast.log", body)
+
     def test_check_picks_the_newest_day_of_the_newest_patch_for_this_feature_set(self):
         rel = updates.check("me/wincast", api=self.base)
         self.assertEqual((rel.tag, rel.name, rel.patch, rel.stamp),

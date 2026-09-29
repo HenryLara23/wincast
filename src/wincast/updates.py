@@ -30,6 +30,8 @@ API = "https://api.github.com"
 TAG_PREFIX = "models-"
 TIMEOUT = 15
 ASSET = re.compile(r"^model-(\d+\.\d+)-(\d{8}-\d{4})\.fs(.+)\.json$")
+REPO_URL = f"https://github.com/{REPO}"
+RELEASES_PAGE = f"{REPO_URL}/releases/latest"
 
 
 @dataclass
@@ -60,8 +62,7 @@ def _session(session=None):
     return s
 
 
-def list_models(repo: str = REPO, api: str = API, session=None):
-    """Every published model file this app can use (newest patch/day last)."""
+def _fetch_releases(repo: str, api: str, session=None) -> list:
     s = _session(session)
     try:
         r = s.get(f"{api}/repos/{repo}/releases", params={"per_page": 100}, timeout=TIMEOUT)
@@ -73,8 +74,12 @@ def list_models(repo: str = REPO, api: str = API, session=None):
         raise UpdateError("GitHub is rate-limiting this connection; try again later")
     if r.status_code != 200:
         raise UpdateError(f"GitHub answered HTTP {r.status_code}")
+    return r.json() or []
+
+
+def _models_in(releases) -> list:
     found = []
-    for rel in r.json() or []:
+    for rel in releases:
         tag = rel.get("tag_name") or ""
         if not tag.startswith(TAG_PREFIX) or rel.get("draft"):
             continue
@@ -86,6 +91,11 @@ def list_models(repo: str = REPO, api: str = API, session=None):
                                           model_url=url, sums_url=assets.get("SHA256SUMS"),
                                           page_url=rel.get("html_url") or ""))
     return sorted(found, key=lambda x: x.sort_key())
+
+
+def list_models(repo: str = REPO, api: str = API, session=None):
+    """Every published model file this app can use (newest patch/day last)."""
+    return _models_in(_fetch_releases(repo, api, session))
 
 
 def check(repo: str = REPO, api: str = API, session=None) -> Optional[ModelRelease]:
@@ -142,3 +152,30 @@ def download(release: ModelRelease, store, session=None):
         return store.install_bytes(data)
     except ValueError as exc:
         raise UpdateError(str(exc)) from None
+
+
+def issue_url(version: str, model: str = "", windows: str = "") -> str:
+    """A new GitHub issue with the useful details already filled in."""
+    from urllib.parse import quote
+    body = ("**What happened?**\n\n\n**What did you expect instead?**\n\n\n---\n"
+            f"Wincast {version} · model {model or 'unknown'} · Windows {windows or 'unknown'}\n\n"
+            "Please attach `wincast.log` (Help > Open Log Folder). It holds no player names; "
+            "error messages in it can include your Windows user name in file paths.\n")
+    return f"https://github.com/{REPO}/issues/new?body={quote(body)}"
+
+
+def season_year(version: str) -> Optional[int]:
+    """'16.19' -> 2026 (League patch 16.x is the 2026 season). None for dev builds."""
+    m = re.fullmatch(r"(\d+)\.\d+", str(version))
+    return 2010 + int(m.group(1)) if m else None
+
+
+def app_is_old(version: str, today=None) -> bool:
+    """True once the NEXT season's first patch is likely out (from Jan 15), judged
+    by the PC's clock alone. Development builds (0.1.0.dev0) never count as old."""
+    import datetime
+    year = season_year(version)
+    if year is None:
+        return False
+    today = today or datetime.date.today()
+    return today >= datetime.date(year + 1, 1, 15)

@@ -142,10 +142,11 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
   `lolwp_16.19_20260929-0204` via Check Now. Full loop proven: server → models release → app release → app update.
 - [ ] Not yet proven: the AUTOMATIC trigger (server creates `models-16.20` → Actions builds v16.20). v16.19 was
   started by hand because the workflow wasn't pushed yet when `models-16.19` was created. Watch it at 16.20.
-- [ ] (later) warn when the newest model's patch is behind Riot's current patch
+- [ ] ~~warn when the model's patch is behind Riot's current patch~~ dropped 2026-09-29: no model nagging
 
 ## Loose ends (audit 2026-09-29)
 
+- [x] No model nagging (models update only via the Models tab / its opt-in startup check). Last-season app note on the Live tab from Jan 15 of the next season (offline, clock + version). Help: Check for Updates / Report a Problem / Open Log Folder; About links the repo
 - [x] X quits (Settings: "Keep running in the tray" hides instead); no pop-up notifications (hotkey trouble shows in Settings); only one Wincast runs, a second launch shows the first's window
 - [x] Commit the private repo's Phase 8 server changes (`lolmodel/scripts/publish_release.py`, its test,
   `deploy/lolwp-publish.{service,timer}`, `deploy/lolwp-train.timer`, `deploy/README.md`, root `.gitignore`).

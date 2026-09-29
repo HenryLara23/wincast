@@ -16,8 +16,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-from PySide6.QtCore import QObject, Qt, Signal
-from PySide6.QtGui import QKeySequence
+from PySide6.QtCore import QObject, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
                                QKeySequenceEdit, QLabel, QMainWindow, QMessageBox,
@@ -25,7 +25,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDoubleSpinBox, QFi
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from .. import APP_NAME, __version__, autostart, prefs
-from ..paths import explorer_path
+from ..paths import explorer_path, user_data_dir
+from ..updates import REPO_URL
 from ..session import CHAOS, ENDED, IN_GAME, LOADING_STATE, NO_GAME, ORDER, UNSUPPORTED
 from .charts import TMGauge, TMGraph, clock
 from .hotkey import parse as parse_hotkey
@@ -130,6 +131,7 @@ class MainWindow(QMainWindow):
         self._overlay_lock_changed(overlay.locked)
         self.refresh_history()
         self._load_settings_into_form()
+        self.update_age_note()
 
     # ================================================================== menus
 
@@ -166,6 +168,14 @@ class MainWindow(QMainWindow):
         a.triggered.connect(self.refresh_history)
 
         m = mb.addMenu("&Help")
+        a = m.addAction("Check for &Updates")
+        a.triggered.connect(self._check_from_menu)
+        a.setEnabled(self.models is not None)
+        a = m.addAction("&Report a Problem...")
+        a.triggered.connect(self.report_problem)
+        a = m.addAction("Open &Log Folder")
+        a.triggered.connect(lambda: self._open_folder(user_data_dir()))
+        m.addSeparator()
         a = m.addAction("&About Wincast")
         a.triggered.connect(self._about)
 
@@ -215,6 +225,14 @@ class MainWindow(QMainWindow):
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(3, 1)
         lay.addWidget(g3)
+        # "this Wincast is from last season", only then (see update_age_note)
+        self.old_note = QLabel()
+        self.old_note.setWordWrap(True)
+        self.old_note.setTextFormat(Qt.TextFormat.RichText)
+        self.old_note.setOpenExternalLinks(True)
+        self.old_note.setStyleSheet("color: #a04000")
+        self.old_note.hide()
+        lay.addWidget(self.old_note)
         if self.model is not None:
             self.lv["model"].setText(self.model.name)
             self.lv["patch"].setText(str(self.model.patch))
@@ -402,8 +420,11 @@ class MainWindow(QMainWindow):
         self.refresh_history()
 
     def open_history_folder(self):
-        self.store.folder.mkdir(parents=True, exist_ok=True)
-        path = str(explorer_path(self.store.folder))
+        self._open_folder(self.store.folder)
+
+    def _open_folder(self, folder):
+        folder.mkdir(parents=True, exist_ok=True)
+        path = str(explorer_path(folder))
         if sys.platform == "win32":
             os.startfile(path)                                     # noqa: S606
         elif sys.platform == "darwin":
@@ -769,6 +790,32 @@ class MainWindow(QMainWindow):
         self.update_status.setText(f"Downloading {rel.name}...")
         self._bg.run(lambda: (rel, updates.download(rel, store)), self._checked)
 
+    def update_age_note(self, version=None, today=None):
+        """A note at the bottom of the Live tab once a new League season has started
+        since this Wincast was built (16.x is the 2026 season). Offline: only the
+        PC's clock and the version number. Source runs never show it."""
+        from .. import updates
+        version = version or __version__
+        old = updates.app_is_old(version, today)
+        if old:
+            self.old_note.setText(
+                f"This Wincast ({version}) is from the {updates.season_year(version)} season. "
+                "A newer version may be out, and League changes each season can make an old one "
+                f'less accurate or stop it working: <a href="{updates.RELEASES_PAGE}">check GitHub</a>.')
+        self.old_note.setVisible(old)
+
+    def _check_from_menu(self):
+        self.tabs.setCurrentIndex(self.tabs.count() - 1)          # the Models tab
+        self.check_for_models()
+
+    def report_problem(self):
+        import platform
+        from .. import updates
+        windows = f"{platform.release()} ({platform.version()})" if sys.platform == "win32" else sys.platform
+        model = getattr(self.model, "name", "") or ""
+        url = updates.issue_url(__version__, model, windows)
+        QDesktopServices.openUrl(QUrl.fromEncoded(url.encode("ascii")))
+
     # ================================================================== misc
 
     def _overlay_lock_changed(self, locked):
@@ -787,6 +834,7 @@ class MainWindow(QMainWindow):
                           "Live win chance for Summoner's Rift.<br><br>"
                           "Reads only the game's own Live Client Data API on this PC. "
                           "No Riot API key, nothing sent anywhere.<br><br>"
+                          f'<a href="{REPO_URL}">{REPO_URL}</a><br><br>'
                           "<small>Wincast isn't endorsed by Riot Games and doesn't reflect the "
                           "views or opinions of Riot Games or anyone officially involved in "
                           "producing or managing Riot Games properties.</small>")
@@ -796,6 +844,7 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def show_and_raise(self):
+        self.update_age_note()                     # the app may have run since last season
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized)
         self.raise_()

@@ -242,6 +242,19 @@ class TestMainWindow(unittest.TestCase):
         finally:
             updates.check = orig
 
+    def test_last_seasons_app_gets_a_note_on_the_live_tab(self):
+        import datetime
+        self.win.update_age_note("16.19", datetime.date(2027, 1, 14))
+        self.assertTrue(self.win.old_note.isHidden())                   # 17.1 not out yet
+        self.win.update_age_note("16.19", datetime.date(2027, 1, 15))
+        self.assertFalse(self.win.old_note.isHidden())
+        self.assertIn("2026 season", self.win.old_note.text())
+        self.assertIn("github.com/HenryLara23/wincast/releases", self.win.old_note.text())
+        self.win.update_age_note("17.2", datetime.date(2027, 3, 1))
+        self.assertTrue(self.win.old_note.isHidden())
+        self.win.update_age_note("0.1.0.dev0", datetime.date(2099, 1, 1))      # source runs: never
+        self.assertTrue(self.win.old_note.isHidden())
+
     def _close_with_tray(self, close_to_tray):
         from unittest import mock
 

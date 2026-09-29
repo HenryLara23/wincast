@@ -105,7 +105,7 @@ def run(args) -> int:
     def save_game(record):
         try:
             path = store.save(record)
-            log.info("saved game to %s (result: %s, %d points)", path,
+            log.info("saved game %s (result: %s, %d points)", path.name,   # no user folder in the log
                      record.get("result"), len(record.get("curve", [])))
             window.game_saved(path)
         except OSError:

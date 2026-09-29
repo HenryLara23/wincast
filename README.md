@@ -126,6 +126,13 @@ the newest, unless you pin one. New models are published as releases on this
 repo (tags `models-<patch>`); **Check Now** finds and installs them, or turn on
 the startup check. A model is never swapped mid-game.
 
+The app itself rarely needs updating. Once a new League season has started (from
+mid-January), a Wincast from the previous season shows a note on the Live tab
+pointing to the Releases page. It works that out from the PC's clock alone.
+
+**Something wrong?** Help > Report a Problem opens a GitHub issue with your Wincast
+version and model filled in; please attach `wincast.log` (Help > Open Log Folder).
+
 ## How the model gets here
 
 The model is trained in a separate (private) repo on ranked Summoner's Rift
