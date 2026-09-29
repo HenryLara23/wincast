@@ -30,15 +30,18 @@ Riot's certificate (`src/wincast/resources/riotgames.pem`, from
 <https://static.developer.riotgames.com/docs/lol/riotgames.pem>) is bundled, so
 the connection to the game is verified.
 
-## Build the .exe (Windows)
+## Releases
 
-```bash
-pip install -e .[ui,build]
-python tools/build_exe.py --zip    # -> dist/Wincast/Wincast.exe and a zip to share
-```
+* **`v<patch>`** (e.g. `v16.20`, marked Latest): the app, `Wincast-16.20-win64.zip`.
+  Built automatically by GitHub Actions when a new patch's models appear, with the
+  previous patch's best model built in.
+* **`models-<patch>`**: that patch's models, one file per day
+  (`model-16.19-20261003-0105.fs1.2.0.json`) plus `SHA256SUMS`. The app finds
+  them itself (Models > Check Now); to use a specific day, download it and use
+  Models > Import.
 
-No Python needed to run the result. Unsigned, so Windows SmartScreen will ask
-"Run anyway" the first time.
+Build locally (Windows): `pip install -e .[ui,build]` then
+`python tools/build_exe.py --zip`. Unsigned, so SmartScreen asks "Run anyway" once.
 
 ## Layout
 
@@ -48,6 +51,8 @@ src/wincast/            the app
   session.py            the engine: game detection, scoring, smoothing, curve (no Qt)
   smoothing.py          log-odds moving average over game time
   resolver.py           which model + item prices a new game gets
+  models.py             installed models: validate, choose (newest or pinned), import
+  updates.py            new models from GitHub Releases (SHA-256 verified)
   worker.py             runs the engine on a background QThread for the UI
   replay.py             plays a saved capture back as if live, at any speed
   headless.py           terminal front end on the same engine
@@ -65,11 +70,20 @@ src/wincast/            the app
 src/lolwp/              live scoring code, VENDORED from the model repo -- do not edit
   CORE_MANIFEST.json    source commit + SHA-256 of every vendored file
 tools/sync_core.py      re-pulls src/lolwp, the fallback model and the golden game
-tools/build_exe.py      PyInstaller build of Wincast.exe
+tools/build_exe.py      PyInstaller build of Wincast.exe (+ zip and SHA256SUMS)
+tools/prepare_release.py, fetch_release_model.py   used by the release workflow
+.github/workflows/release-app.yml   builds and publishes v<patch> on a Windows runner
 tests/                  incl. test_golden.py: a real anonymised game re-scored
 scripts/check_no_player_data.py   pre-commit guard (git config core.hooksPath .githooks)
 docs/                   Live Client API reference, original design review
 ```
+
+## Models
+
+The Models tab lists the models Wincast has, and which one the next game uses:
+the newest, unless you pin one. New models are published as releases on this
+repo (tags `model-<patch>-…`); **Check Now** finds and installs them, or turn on
+the startup check. A model is never swapped mid-game.
 
 ## How the model gets here
 
@@ -93,7 +107,7 @@ Wincast sends nothing anywhere. Each game it watches is saved on your PC for the
 History tab (win-chance curve, result, your champion, objective times by team);
 no player names are stored. The only
 network requests are Riot's public Data Dragon (item prices, once per patch)
-and, if you turn it on, a check for newer models.
+and GitHub, only when you press Check Now or turn on the startup check.
 
 ---
 

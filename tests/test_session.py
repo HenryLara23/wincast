@@ -4,7 +4,7 @@ import copy
 import json
 import unittest
 
-from tests import ROOT
+from tests import GOLDEN_MODEL, ROOT
 
 from wincast.client import DATA, ERROR, LOADING, OFFLINE, Poll
 from wincast.resolver import FixedResolver
@@ -37,7 +37,7 @@ def renamed(snap, suffix):
 
 class CountingResolver:
     def __init__(self):
-        self.inner = FixedResolver()
+        self.inner = FixedResolver(GOLDEN_MODEL)
         self.calls = 0
 
     def __call__(self):
@@ -139,7 +139,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(self.feed(self.snaps[7]).state, IN_GAME)
 
     def test_smoothing_lags_raw_but_follows(self):
-        eng = Engine(FixedResolver(), tau_s=60)
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=60)
         ups = [eng.feed(Poll.of(s)) for s in self.snaps]
         self.assertTrue(any(abs(u.p_mine - u.p_mine_raw) > 1e-3 for u in ups[1:]))
         self.assertAlmostEqual(ups[0].p_mine, ups[0].p_mine_raw)

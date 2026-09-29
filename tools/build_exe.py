@@ -64,7 +64,10 @@ def main():
     if args.zip:
         out = shutil.make_archive(str(ROOT / "dist" / f"Wincast-{version()}-win64"), "zip",
                                   ROOT / "dist", "Wincast")
-        print(f"zipped {out}")
+        import hashlib
+        digest = hashlib.sha256(Path(out).read_bytes()).hexdigest()
+        (ROOT / "dist" / "SHA256SUMS").write_text(f"{digest}  {Path(out).name}\n", encoding="utf-8")
+        print(f"zipped {out}\nchecksum in dist/SHA256SUMS")
 
 
 if __name__ == "__main__":

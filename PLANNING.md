@@ -103,16 +103,44 @@ Windows (Qt 6.7+ would otherwise pick the rounded Windows 11 style).
 
 **Phase 7 done.**
 
-## Phase 8 — Models & updates
+## Phase 8 — Models, updates & automatic releases
 
-- [ ] Model folder in `%LOCALAPPDATA%\Wincast\models`; pick the one matching the live patch, else newest, else the bundled fallback
-- [ ] Refuse wrong feature-set version with a plain message
-- [ ] GitHub Releases check at launch only, SHA-256 verified, previous model kept for rollback; with auto-update off, show a line (not a popup) that a newer model exists
+Decided 2026-09-28 (Henry): everything automatic from the server; retrain every 6 h; publish the day's
+best model per patch; the app itself released once per patch as **v<patch>** (e.g. `v16.20`, no
+mid-patch releases) with the PREVIOUS patch's last model built in. App auto-update off by default.
+
+**GitHub layout (public repo `HenryLara23/wincast`):** code in the repo, no weights committed. Releases:
+
+| Release | Tag | Files | Made by |
+|---|---|---|---|
+| App, once per patch | `v16.20` (Latest) | `Wincast-16.20-win64.zip`, `SHA256SUMS` | GitHub Actions |
+| Models of a patch | `models-16.19` | `model-16.19-<YYYYMMDD-HHMM>.fs1.2.0.json` one per day, `SHA256SUMS` | the server |
+
+- [x] App: `models.py` (ModelStore: validate, choose newest-or-pinned, import), `StoreResolver` (per game,
+  never mid-game), `updates.py` (newest `models-*` release → newest file for this feature set, SHA-256
+  verified), **Models tab** (list, Import, Use Selected/Newest, Remove, Check Now → Download, startup
+  check off by default)
+- [x] Server: `lolmodel/scripts/publish_release.py` + `deploy/lolwp-publish.{service,timer}` (daily 23:30
+  UTC): uploads the patch's best model into `models-<patch>` when it changed; creates a patch's release
+  only once it has ≥ 20k training games; rewrites SHA256SUMS; never "latest". Retrain timer → every 6 h.
+- [x] `.github/workflows/release-app.yml` (Windows runner): on a new `models-<patch>` release (or by hand)
+  → fetch the previous patch's last model (`tools/fetch_release_model.py`) → `tools/prepare_release.py`
+  (version = patch, built-in model + its item prices, manifest, notes) → tests → `tools/build_exe.py --zip`
+  → `gh release create v<patch> --latest`. Skips if `v<patch>` exists. First ever run keeps the repo's model.
+- [x] Tests score with a frozen model/items (`tests/fixtures/golden_model.json`, `fixtures/ddragon/`) so
+  swapping the built-in model can't break them. Rehearsed prepare → test → build → zip on Linux.
+- [x] 95 app tests; 9 publisher tests (lolmodel)
+- [ ] Henry: fine-grained token (Contents RW, wincast only) → `/srv/lol/release.env`; upload
+  `publish_release.py` + the three unit files; `--dry-run`; first upload creates `models-16.19` → which
+  starts the first app build (`v16.19`, with the repo's 16.18 model)
+- [ ] Watch the first Actions run (Actions tab); then Check Now from the released .exe
+- [ ] (later) warn when the newest model's patch is behind Riot's current patch
 
 ## Phase 9 — Packaging & release
 
 - [x] PyInstaller single-folder build (`tools/build_exe.py`), works on Henry's PC
-- [ ] Installer (or a zip) and an app icon file
+- [x] Zip per release, built by GitHub Actions (Phase 8)
+- [ ] App icon file (.ico) for the .exe and the zip; installer maybe later
 - [x] Licence: MIT
 - [ ] Register the product with Riot's developer portal before publishing a binary
 - [ ] README screenshots, privacy statement, "not endorsed by Riot" line (done in README)

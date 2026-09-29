@@ -5,7 +5,7 @@ import os
 import threading
 import unittest
 
-from tests import ROOT
+from tests import GOLDEN_MODEL, ROOT
 
 try:
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -39,7 +39,7 @@ class TestScoringRunner(unittest.TestCase):
             poll_threads.append(threading.get_ident())
             return script.pop(0) if script else Poll(OFFLINE)
 
-        runner = ScoringRunner(Engine(FixedResolver()), poll, fast_ms=1, slow_ms=1)
+        runner = ScoringRunner(Engine(FixedResolver(GOLDEN_MODEL)), poll, fast_ms=1, slow_ms=1)
         got, states, ended, started = [], [], [], []
         ui_thread = threading.get_ident()
         delivered_on = set()
@@ -81,7 +81,7 @@ class TestScoringRunner(unittest.TestCase):
                 return None                                  # first try: nothing yet
             return [{"EventName": "GameEnd", "EventTime": 900.0, "Result": "Win"}]
 
-        runner = ScoringRunner(Engine(FixedResolver()), lambda: script.pop(0) if script else Poll(OFFLINE),
+        runner = ScoringRunner(Engine(FixedResolver(GOLDEN_MODEL)), lambda: script.pop(0) if script else Poll(OFFLINE),
                                fast_ms=1, slow_ms=1, events=events)
         ended, finished = [], []
         runner.gameEnded.connect(ended.append)

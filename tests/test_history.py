@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests import ROOT
+from tests import GOLDEN_MODEL, ROOT
 from tests.test_session import renamed, with_game_end
 
 from wincast.client import OFFLINE, Poll
@@ -22,7 +22,7 @@ NAMES = {p["riotId"] for p in SNAPS[0]["allPlayers"]} | \
 
 class TestEngineHandsOverGames(unittest.TestCase):
     def setUp(self):
-        self.eng = Engine(FixedResolver(), tau_s=0)
+        self.eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=0)
 
     def feed(self, *snaps):
         for s in snaps:
@@ -57,7 +57,7 @@ class TestEngineHandsOverGames(unittest.TestCase):
 class TestRecord(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        eng = Engine(FixedResolver(), tau_s=5)
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=5)
         for s in SNAPS:
             eng.feed(Poll.of(s))
         eng.feed(Poll.of(with_game_end(SNAPS[-1], "Win")))
@@ -128,7 +128,7 @@ class TestGameEndsUnseen(unittest.TestCase):
 
     def test_result_seen_even_if_the_final_snapshot_fails_to_score(self):
         import copy
-        eng = Engine(FixedResolver(), tau_s=0)
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=0)
         for s in SNAPS[:5]:
             eng.feed(Poll.of(s))
         end = with_game_end(SNAPS[4], "Win")
@@ -141,7 +141,7 @@ class TestGameEndsUnseen(unittest.TestCase):
 
     def test_client_gone_for_three_minutes_saves_the_game(self):
         now = [1000.0]
-        eng = Engine(FixedResolver(), tau_s=0, clock=lambda: now[0])
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=0, clock=lambda: now[0])
         for s in SNAPS[:5]:
             eng.feed(Poll.of(s))
         eng.feed(Poll(OFFLINE))
@@ -157,7 +157,7 @@ class TestGameEndsUnseen(unittest.TestCase):
 
     def test_reconnect_inside_the_grace_keeps_the_game(self):
         now = [1000.0]
-        eng = Engine(FixedResolver(), tau_s=0, clock=lambda: now[0])
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=0, clock=lambda: now[0])
         for s in SNAPS[:5]:
             eng.feed(Poll.of(s))
         gid = eng.game.id
@@ -191,7 +191,7 @@ class TestEventsFallback(unittest.TestCase):
     then closed; GameEnd was never seen. /eventdata is the fallback."""
 
     def test_feed_events_ends_the_game(self):
-        eng = Engine(FixedResolver(), tau_s=0)
+        eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=0)
         for s in SNAPS[:5]:
             eng.feed(Poll.of(s))
         self.assertIsNone(eng.feed_events([{"EventName": "ChampionKill", "EventTime": 900}]))

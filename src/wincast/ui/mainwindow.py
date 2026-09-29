@@ -15,9 +15,9 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDoubleSpinBox, QFormLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
                                QKeySequenceEdit, QLabel, QMainWindow, QMessageBox,
                                QPushButton, QSpinBox, QSplitter, QTabWidget, QTreeWidget,
@@ -50,6 +50,34 @@ def local_time(started_utc: str) -> str:
         return started_utc or "?"
 
 
+class BackgroundTask(QObject):
+    """Run one blocking call (a network check) off the UI thread and hand the
+    result back on it: done(result, error_text)."""
+
+    done = Signal(object, str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._callback = None
+        self.done.connect(self._finish)
+
+    def run(self, fn, callback):
+        import threading
+        self._callback = callback
+
+        def target():
+            try:
+                self.done.emit(fn(), "")
+            except Exception as exc:              # shown to the user as text
+                self.done.emit(None, str(exc) or type(exc).__name__)
+
+        threading.Thread(target=target, daemon=True, name="wincast-bg").start()
+
+    def _finish(self, result, error):
+        if self._callback is not None:
+            self._callback(result, error)
+
+
 class SortItem(QTreeWidgetItem):
     """Sorts by the value stored under UserRole when there is one (numbers, dates)."""
 
@@ -64,10 +92,14 @@ class SortItem(QTreeWidgetItem):
 class MainWindow(QMainWindow):
     settingsApplied = Signal()
 
-    def __init__(self, settings, store, overlay, model=None, connection="", parent=None):
+    def __init__(self, settings, store, overlay, model=None, connection="", models=None,
+                 parent=None):
         super().__init__(parent)
         self.settings = settings
         self.store = store
+        self.models = models               # ModelStore (None: a fixed --model run)
+        self._bg = BackgroundTask(self)
+        self._release = None               # a newer release found by Check Now
         self.overlay = overlay
         self.model = model
         self.connection = connection
@@ -85,6 +117,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._live_tab(), "Live")
         self.tabs.addTab(self._history_tab(), "History")
         self.tabs.addTab(self._settings_tab(), "Settings")
+        self.tabs.addTab(self._models_tab(), "Models")
         body = QWidget()
         lay = QVBoxLayout(body)
         lay.setContentsMargins(6, 6, 6, 4)
@@ -105,6 +138,9 @@ class MainWindow(QMainWindow):
         m = mb.addMenu("&File")
         a = m.addAction("Open &History Folder")
         a.triggered.connect(self.open_history_folder)
+        a = m.addAction("&Import Model...")
+        a.triggered.connect(self.import_model)
+        a.setEnabled(self.models is not None)
         m.addSeparator()
         a = m.addAction("E&xit Wincast")
         a.triggered.connect(self._quit)
@@ -429,18 +465,6 @@ class MainWindow(QMainWindow):
         v.addWidget(self.chk_open_on_start)
         lay.addWidget(g)
 
-        g = QGroupBox("Model")
-        f = QFormLayout(g)
-        m = self.model
-        b = getattr(m, "bundle", {}) or {}
-        games = (b.get("games") or {}).get("train")
-        ll = ((b.get("metrics") or {}).get("holdout") or {}).get("log_loss")
-        acc = ((b.get("metrics") or {}).get("holdout") or {}).get("acc")
-        f.addRow("Name:", QLabel(getattr(m, "name", "--")))
-        f.addRow("Patch:", QLabel(str(getattr(m, "patch", "--"))))
-        f.addRow("Trained on:", QLabel(f"{games:,} games" if games else "--"))
-        f.addRow("Accuracy on unseen games:", QLabel(f"{acc:.1%}  (log loss {ll:.3f})" if acc and ll else "--"))
-        lay.addWidget(g)
         lay.addStretch(1)
 
         row = QHBoxLayout()
@@ -526,6 +550,211 @@ class MainWindow(QMainWindow):
         self.sp_smooth.setValue(d["smoothing_s"])
         self.chk_open_on_start.setChecked(d["general/open_window_on_start"])
         self.btn_apply.setEnabled(True)
+
+    # ================================================================== models
+
+    def _models_tab(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        g = QGroupBox("Installed models")
+        gl = QVBoxLayout(g)
+        self.model_list = QTreeWidget()
+        self.model_list.setHeaderLabels(["In use", "Name", "Patch", "Trained on", "Accuracy",
+                                         "Source"])
+        self.model_list.setRootIsDecorated(False)
+        self.model_list.setUniformRowHeights(True)
+        hdr = self.model_list.header()
+        hdr.setStretchLastSection(False)
+        fm = self.model_list.fontMetrics()
+        for col, sample in enumerate(["Next game", None, "88.88", "888,888 games", "88.8 %",
+                                      "Downloaded"]):
+            if sample is None:
+                hdr.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+            else:
+                self.model_list.setColumnWidth(col, fm.horizontalAdvance(sample) + 22)
+        self.model_list.currentItemChanged.connect(lambda *_: self._model_buttons())
+        gl.addWidget(self.model_list, 1)
+        note = QLabel("A new model is used from the next game; one is never swapped mid-game.")
+        note.setEnabled(False)
+        gl.addWidget(note)
+        row = QHBoxLayout()
+        self.btn_import = QPushButton("&Import...")
+        self.btn_use = QPushButton("&Use Selected")
+        self.btn_newest = QPushButton("Use &Newest")
+        self.btn_remove = QPushButton("&Remove")
+        self.btn_import.clicked.connect(self.import_model)
+        self.btn_use.clicked.connect(self._pin_selected)
+        self.btn_newest.clicked.connect(self._unpin)
+        self.btn_remove.clicked.connect(self._remove_selected)
+        row.addWidget(self.btn_import)
+        row.addStretch(1)
+        for b in (self.btn_use, self.btn_newest, self.btn_remove):
+            row.addWidget(b)
+        gl.addLayout(row)
+        lay.addWidget(g, 1)
+
+        g = QGroupBox("Updates")
+        gl = QVBoxLayout(g)
+        self.chk_auto_update = QCheckBox("Check for new models when Wincast starts, and install them")
+        self.chk_auto_update.setChecked(prefs.get(self.settings, "models/auto_update"))
+        self.chk_auto_update.toggled.connect(
+            lambda on: prefs.put(self.settings, "models/auto_update", on))
+        gl.addWidget(self.chk_auto_update)
+        row = QHBoxLayout()
+        self.update_status = QLabel("Wincast only contacts GitHub when you ask it to.")
+        row.addWidget(self.update_status, 1)
+        self.btn_check = QPushButton("&Check Now")
+        self.btn_download = QPushButton("&Download")
+        self.btn_download.setEnabled(False)
+        self.btn_check.clicked.connect(self.check_for_models)
+        self.btn_download.clicked.connect(self.download_model)
+        row.addWidget(self.btn_check)
+        row.addWidget(self.btn_download)
+        gl.addLayout(row)
+        lay.addWidget(g)
+
+        if self.models is None:                   # a fixed --model run
+            for b in (self.btn_import, self.btn_use, self.btn_newest, self.btn_remove,
+                      self.btn_check, self.chk_auto_update):
+                b.setEnabled(False)
+            self.update_status.setText("Started with --model: that model is used for every game.")
+        self.refresh_models()
+        return w
+
+    def refresh_models(self):
+        self.model_list.clear()
+        if self.models is None:
+            if self.model is not None:
+                it = QTreeWidgetItem(["Always", self.model.name, str(self.model.patch), "", "",
+                                      "--model"])
+                self.model_list.addTopLevelItem(it)
+            return
+        pinned = prefs.get(self.settings, "models/pinned")
+        try:
+            chosen = self.models.choose(pinned).path
+        except Exception:
+            chosen = None
+        for m in self.models.models():
+            in_use = ""
+            if m.path == chosen:
+                in_use = "Pinned" if pinned and m.name == pinned else "Next game"
+            acc = f"{m.accuracy:.1%}" if m.accuracy else "--"
+            games = f"{m.train_games:,} games" if m.train_games else "--"
+            source = {"bundled": "Built in"}.get(m.source, "Downloaded")
+            it = QTreeWidgetItem([in_use, m.name if m.ok else f"{m.name}  (can't use: {m.error})",
+                                  m.patch or "--", games, acc, source])
+            it.setData(0, Qt.ItemDataRole.UserRole, m)
+            if not m.ok:
+                it.setDisabled(True)
+            if in_use:
+                f = it.font(1)
+                f.setBold(True)
+                for c in range(6):
+                    it.setFont(c, f)
+            for c in (0, 2, 3, 4, 5):
+                it.setTextAlignment(c, Qt.AlignmentFlag.AlignCenter)
+            self.model_list.addTopLevelItem(it)
+        self.btn_newest.setEnabled(bool(pinned))
+        self._model_buttons()
+
+    def _selected_model(self):
+        it = self.model_list.currentItem()
+        return it.data(0, Qt.ItemDataRole.UserRole) if it is not None else None
+
+    def _model_buttons(self):
+        if self.models is None:
+            return
+        m = self._selected_model()
+        self.btn_use.setEnabled(bool(m and m.ok))
+        self.btn_remove.setEnabled(bool(m and m.source != "bundled"))
+
+    def import_model(self):
+        if self.models is None:
+            return
+        path, _ = QFileDialog.getOpenFileName(self, "Import Model", "", "Wincast model (*.json)")
+        if not path:
+            return
+        try:
+            info = self.models.import_file(path)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, APP_NAME, str(exc))
+            return
+        self.refresh_models()
+        self.update_status.setText(f"Imported {info.name}.")
+
+    def _pin_selected(self):
+        m = self._selected_model()
+        if m and m.ok:
+            prefs.put(self.settings, "models/pinned", m.name)
+            self.refresh_models()
+
+    def _unpin(self):
+        prefs.put(self.settings, "models/pinned", "")
+        self.refresh_models()
+
+    def _remove_selected(self):
+        m = self._selected_model()
+        if not m or m.source == "bundled":
+            return
+        ok = QMessageBox.question(self, APP_NAME, f"Remove {m.name}?",
+                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                  QMessageBox.StandardButton.No)
+        if ok != QMessageBox.StandardButton.Yes:
+            return
+        self.models.remove(m)
+        if prefs.get(self.settings, "models/pinned") == m.name:
+            prefs.put(self.settings, "models/pinned", "")
+        self.refresh_models()
+
+    def check_for_models(self, install=False):
+        """Check Now (and the startup check, with install=True)."""
+        if self.models is None:
+            return
+        from .. import updates
+        self.btn_check.setEnabled(False)
+        self.btn_download.setEnabled(False)
+        self.update_status.setText("Checking GitHub...")
+        store = self.models
+
+        def work():
+            rel = updates.check()
+            if install and updates.is_newer(rel, store):
+                return rel, updates.download(rel, store)
+            return rel, None
+
+        self._bg.run(work, self._checked)
+
+    def _checked(self, result, error):
+        from .. import updates
+        self.btn_check.setEnabled(True)
+        if error:
+            self.update_status.setText(f"Couldn't check: {error}")
+            return
+        rel, installed = result
+        self.refresh_models()
+        if installed is not None:
+            self.update_status.setText(f"Installed {installed.name}; used from the next game.")
+            if self.tray is not None:
+                self.tray.notify(f"New model installed (patch {installed.patch}). "
+                                 "It's used from your next game.")
+        elif rel is None:
+            self.update_status.setText("No models published yet for this version of Wincast.")
+        elif updates.is_newer(rel, self.models):
+            self._release = rel
+            self.btn_download.setEnabled(True)
+            self.update_status.setText(f"A newer model is available: {rel.name} (patch {rel.patch}).")
+        else:
+            self.update_status.setText("You have the newest model.")
+
+    def download_model(self):
+        if self._release is None or self.models is None:
+            return
+        from .. import updates
+        rel, store = self._release, self.models
+        self.btn_download.setEnabled(False)
+        self.btn_check.setEnabled(False)
+        self.update_status.setText(f"Downloading {rel.name}...")
+        self._bg.run(lambda: (rel, updates.download(rel, store)), self._checked)
 
     # ================================================================== misc
 

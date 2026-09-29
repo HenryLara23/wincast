@@ -235,12 +235,17 @@ print(json.dumps(out))
                  "produced by the model repo's code at sync time; tests/test_golden.py "
                  "re-scores it with the vendored copy. Regenerate with tools/sync_core.py.",
         "items_version": items_version,
-        "model": "src/wincast/resources/models/fallback.json",
+        "model": "tests/fixtures/golden_model.json",
         "snapshots": snaps,
         "expected": scored,
     }
     dst = FIXTURES / "golden_game.json"
     dst.write_text(json.dumps(golden, separators=(",", ":")), encoding="utf-8")
+    # freeze the model and item prices it was scored with, next to it
+    shutil.copy2(model_path, FIXTURES / "golden_model.json")
+    (FIXTURES / "ddragon").mkdir(parents=True, exist_ok=True)
+    for f in (RES / "ddragon").glob("*.json"):
+        shutil.copy2(f, FIXTURES / "ddragon" / f.name)
     return dst, len(snaps)
 
 

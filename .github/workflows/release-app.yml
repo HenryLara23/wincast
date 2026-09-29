@@ -1,0 +1,93 @@
+# Build and publish Wincast for a new patch, on GitHub's Windows machines.
+#
+# Starts automatically when the server creates the release `models-<patch>` for a
+# new patch (the first day that patch's model is good enough to publish). Builds
+# Wincast <patch> with the PREVIOUS patch's last published model built in, runs the
+# tests, and publishes the release `v<patch>` (marked Latest) with the zip.
+#
+# Can also be started by hand: Actions > Release app > Run workflow > patch.
+# Does nothing if v<patch> already exists.
+
+name: Release app
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      patch:
+        description: "Patch to release for, e.g. 16.20"
+        required: true
+
+permissions:
+  contents: write            # create the v<patch> release
+
+concurrency:
+  group: release-app
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'models-')
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which patch
+        id: patch
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT: ${{ inputs.patch }}
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then P="${TAG#models-}"; else P="$INPUT"; fi
+          if ! [[ "$P" =~ ^[0-9]+\.[0-9]+$ ]]; then echo "not a patch: $P"; exit 1; fi
+          echo "patch=$P" >> "$GITHUB_OUTPUT"
+          if gh release view "v$P" >/dev/null 2>&1; then
+            echo "v$P already exists: nothing to do"
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.patch.outputs.skip != '1'
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        if: steps.patch.outputs.skip != '1'
+        run: python -m pip install -e ".[ui,dev,build]"
+
+      - name: Previous patch's last model
+        if: steps.patch.outputs.skip != '1'
+        run: python tools/fetch_release_model.py --before ${{ steps.patch.outputs.patch }} --out build/model.json
+
+      - name: Prepare version and built-in model
+        if: steps.patch.outputs.skip != '1'
+        shell: bash
+        run: |
+          if [ -f build/model.json ]; then
+            python tools/prepare_release.py --version "${{ steps.patch.outputs.patch }}" --model build/model.json
+          else
+            python tools/prepare_release.py --version "${{ steps.patch.outputs.patch }}"
+          fi
+
+      - name: Tests
+        if: steps.patch.outputs.skip != '1'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+
+      - name: Build Wincast.exe
+        if: steps.patch.outputs.skip != '1'
+        run: python tools/build_exe.py --zip
+
+      - name: Publish v${{ steps.patch.outputs.patch }}
+        if: steps.patch.outputs.skip != '1'
+        shell: bash
+        run: |
+          P="${{ steps.patch.outputs.patch }}"
+          gh release create "v$P" "dist/Wincast-$P-win64.zip" dist/SHA256SUMS \
+            --title "Wincast $P" --notes-file build/release-notes.md --latest

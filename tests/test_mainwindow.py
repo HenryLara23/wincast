@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests import ROOT
+from tests import GOLDEN_MODEL, ROOT
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
@@ -31,7 +31,7 @@ GOLDEN = json.loads((ROOT / "tests" / "fixtures" / "golden_game.json").read_text
 
 def played_record(result="Win"):
     from tests.test_session import with_game_end
-    eng = Engine(FixedResolver(), tau_s=5)
+    eng = Engine(FixedResolver(GOLDEN_MODEL), tau_s=5)
     for s in GOLDEN["snapshots"]:
         eng.feed(Poll.of(s))
     eng.feed(Poll.of(with_game_end(GOLDEN["snapshots"][-1], result)))
@@ -43,15 +43,17 @@ class TestMainWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
-        cls.model = FixedResolver()()[0]
+        cls.model = FixedResolver(GOLDEN_MODEL)()[0]
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.settings = QSettings(str(Path(self.tmp.name) / "s.ini"), QSettings.Format.IniFormat)
         self.store = HistoryStore(Path(self.tmp.name) / "history")
         self.overlay = OverlayWindow(self.settings)
+        from wincast.models import ModelStore
+        self.models = ModelStore(Path(self.tmp.name) / "models")
         self.win = MainWindow(self.settings, self.store, self.overlay, model=self.model,
-                              connection="verified (riotgames.pem)")
+                              connection="verified (riotgames.pem)", models=self.models)
 
     def tearDown(self):
         self.win.deleteLater()
@@ -163,6 +165,82 @@ class TestMainWindow(unittest.TestCase):
         self.assertEqual(self.win.sb_overlay.text(), "Overlay: moving")
         self.overlay.set_locked(True)
         self.assertFalse(self.win.act_move.isChecked())
+
+    def _wait(self, cond, ms=5000):
+        import time
+        end = time.time() + ms / 1000
+        while not cond() and time.time() < end:
+            self.app.processEvents()
+            time.sleep(0.01)
+        self.app.processEvents()
+
+    def test_models_tab_lists_pins_and_removes(self):
+        from tests.test_models import variant
+        ml = self.win.model_list
+        self.assertEqual(ml.topLevelItemCount(), 1)
+        self.assertEqual(ml.topLevelItem(0).text(0), "Next game")
+        self.assertEqual(ml.topLevelItem(0).text(5), "Built in")
+        self.models.install_bytes(variant("m_16.19", "16.19", "2026-10-01T00:00:00Z"))
+        self.win.refresh_models()
+        self.assertEqual(ml.topLevelItemCount(), 2)
+        self.assertEqual(ml.topLevelItem(1).text(0), "Next game")        # newest wins
+        self.assertEqual(ml.topLevelItem(0).text(0), "")
+        ml.setCurrentItem(ml.topLevelItem(0))
+        self.win._pin_selected()
+        built_in = self.models.models()[0].name              # whatever model ships
+        self.assertEqual(prefs.get(self.settings, "models/pinned"), built_in)
+        self.assertEqual(ml.topLevelItem(0).text(0), "Pinned")
+        self.assertTrue(self.win.btn_newest.isEnabled())
+        self.win._unpin()
+        self.assertEqual(ml.topLevelItem(1).text(0), "Next game")
+        ml.setCurrentItem(ml.topLevelItem(1))
+        orig = QMessageBox.question
+        QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
+        try:
+            self.win._remove_selected()
+        finally:
+            QMessageBox.question = orig
+        self.assertEqual(ml.topLevelItemCount(), 1)
+        ml.setCurrentItem(ml.topLevelItem(0))
+        self.assertFalse(self.win.btn_remove.isEnabled())                # built-in stays
+
+    def test_check_now_and_download(self):
+        from tests.test_models import variant
+        from wincast import updates
+        rel = updates.ModelRelease("model-16.19-x", "m_16.19", "16.19", "", "u", "s")
+        orig = updates.check, updates.download
+        updates.check = lambda *a, **k: rel
+        updates.download = lambda r, store, **k: store.install_bytes(
+            variant("m_16.19", "16.19", "2026-10-01T00:00:00Z"))
+        try:
+            self.assertFalse(self.win.btn_download.isEnabled())
+            self.win.check_for_models()
+            self._wait(lambda: self.win.btn_download.isEnabled())
+            self.assertIn("newer model is available", self.win.update_status.text())
+            self.win.download_model()
+            self._wait(lambda: "Installed" in self.win.update_status.text())
+            self.assertIn("m_16.19", self.win.update_status.text())
+            self.assertEqual(self.models.choose().name, "m_16.19")
+            self.win.check_for_models()
+            self._wait(lambda: "newest" in self.win.update_status.text())
+            self.assertFalse(self.win.btn_download.isEnabled())
+        finally:
+            updates.check, updates.download = orig
+
+    def test_check_now_reports_errors(self):
+        from wincast import updates
+        orig = updates.check
+
+        def boom(*a, **k):
+            raise updates.UpdateError("couldn't reach GitHub (ConnectionError)")
+        updates.check = boom
+        try:
+            self.win.check_for_models()
+            self._wait(lambda: "Couldn't check" in self.win.update_status.text())
+            self.assertIn("reach GitHub", self.win.update_status.text())
+            self.assertTrue(self.win.btn_check.isEnabled())
+        finally:
+            updates.check = orig
 
     def test_close_hides_instead_of_quitting(self):
         self.win.show()

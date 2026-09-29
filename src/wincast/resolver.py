@@ -1,8 +1,10 @@
 """Which model and item prices a new game gets.
 
-For now: the model bundled with the app (or one given on the command line),
-with item prices for its patch. Phase 8 replaces this with a pick from the
-user's model folder by live patch. Loaded once and reused across games."""
+FixedResolver   one model file (--model on the command line, headless, tests)
+StoreResolver   the app: asks the ModelStore at the start of every game, so a
+                model downloaded or imported mid-game is used from the NEXT game.
+Loaded models and item prices are cached, so a new game costs nothing when the
+choice hasn't changed."""
 
 from __future__ import annotations
 
@@ -42,3 +44,24 @@ class FixedResolver:
             model = Model.load(self.model_path)
             self._cached = (model, load_items(model, self.ddragon))
         return self._cached
+
+
+class StoreResolver:
+    def __init__(self, store, pinned=lambda: "", ddragon=None):
+        self.store = store
+        self.pinned = pinned                 # callable -> pinned model name or ""
+        self.ddragon = ddragon
+        self._cache = {}                     # path -> (mtime, model, db)
+        self.current = None                  # ModelInfo of the last choice
+
+    def __call__(self):
+        info = self.store.choose(self.pinned())
+        key = str(info.path)
+        mtime = info.path.stat().st_mtime if info.path.exists() else 0
+        hit = self._cache.get(key)
+        if hit is None or hit[0] != mtime:
+            model = Model(info.bundle)
+            hit = (mtime, model, load_items(model, self.ddragon))
+            self._cache[key] = hit
+        self.current = info
+        return hit[1], hit[2]

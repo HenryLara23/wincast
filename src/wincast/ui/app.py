@@ -18,7 +18,8 @@ from .. import APP_NAME, __version__, applog, prefs
 from ..client import LiveClient
 from ..history import HistoryStore
 from ..paths import user_data_dir
-from ..resolver import FixedResolver
+from ..models import ModelStore
+from ..resolver import FixedResolver, StoreResolver
 from ..session import Engine
 from ..worker import ScoringRunner
 from .hotkey import GlobalHotkey
@@ -47,7 +48,12 @@ def run(args) -> int:
     settings = QSettings()
     log.info("Wincast %s starting", __version__)
 
-    resolver = FixedResolver(args.model)
+    models = None
+    if args.model:                                  # one fixed model for every game
+        resolver = FixedResolver(args.model)
+    else:                                           # newest (or pinned) installed model
+        models = ModelStore(user_data_dir() / "models")
+        resolver = StoreResolver(models, pinned=lambda: prefs.get(settings, "models/pinned"))
     try:
         model, db = resolver()
     except Exception as exc:
@@ -77,7 +83,8 @@ def run(args) -> int:
     hotkey_text = prefs.get(settings, "hotkey")
     overlay.hotkey_text = hotkey_text
 
-    window = MainWindow(settings, store, overlay, model=model, connection=connection)
+    window = MainWindow(settings, store, overlay, model=model, connection=connection,
+                        models=models)
     window.runner = runner
 
     runner.updated.connect(overlay.show_update)
@@ -132,6 +139,9 @@ def run(args) -> int:
     keepalive.start()
 
     runner.start()
+    if models is not None and not args.replay and prefs.get(settings, "models/auto_update"):
+        log.info("checking GitHub for new models (auto-update is on)")
+        QTimer.singleShot(3000, lambda: window.check_for_models(install=True))
     if args.quit_after:
         QTimer.singleShot(int(args.quit_after * 1000), app.quit)
     return app.exec()
