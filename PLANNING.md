@@ -61,12 +61,47 @@ model repo are private and frozen except for bugs or a major game change.
 - [x] `.exe` build tested by Henry: works
 - [ ] Settings for scale / opacity / trend on-off / trend minutes exist in QSettings (`overlay/scale`, `overlay/opacity`, `overlay/trend`, `overlay/trend_minutes`) but have no UI until Phase 7
 
-## Phase 7 — Tray + main window
+## Phase 7 — Main window, history, settings
 
-- [ ] Tray icon: show/hide overlay, open window, quit; optional start with Windows
-- [ ] **Live** tab: full curve for a second monitor
-- [ ] **History** tab: every game's live curve saved locally (no key needed), browse past games
-- [ ] **Settings & Model** tab: hotkey, opacity, smoothing, loaded model + patch + scores, import model file, auto-update toggle (off)
+Look: Windows 7 Task Manager (Henry's pick): menu bar, tabs, sunken list, bottom-right buttons,
+sectioned status bar, green-on-black Performance-tab graphs. Qt's `windowsvista` style is forced on
+Windows (Qt 6.7+ would otherwise pick the rounded Windows 11 style).
+
+- [x] **Game history** (`history.py`): one JSON per game in `%LOCALAPPDATA%\Wincast\history\` —
+  curve, result, side, champion, length, model, objective/kill times with the TEAM that took them.
+  **No names**: killers are resolved to a team in memory and dropped. Replays save to `history-replay\`.
+- [x] Engine hands each game over exactly once: on GameEnd, or when abandoned after ≥ 60 s (new game,
+  unsupported mode, app quit)
+- [x] `ui/mainwindow.py`: File (history folder, exit) · Options (always on top, move overlay, open at
+  startup) · View (refresh, F5) · Help (about)
+  - [x] **Live**: segmented gauge + green graph of the whole game + "This game" details
+  - [x] **History**: sortable list (date, champion, side, result, length, final/lowest/highest), graph of
+    the selected game with objective letters and kill ticks per team, Delete, Open Folder
+  - [x] **Settings**: overlay size / opacity / trend on-off / trend minutes / hotkey, smoothing, start with
+    Windows (.exe only), open window at startup, model info; Apply + Restore Defaults, applied live
+  - [x] Status bar: state · win chance · games recorded · overlay locked/moving
+- [x] Tray: "Open Wincast" (also single/double click); closing the window hides it (tray message once)
+- [x] `prefs.py`: every setting's key, default and limits in one place; bad values fall back
+- [x] Worker timer destroyed in its own thread (fixes a "Timers cannot be stopped from another thread" warning at exit)
+- [x] Graph fill/line green above 50 %, red below (Henry, 2026-09-28)
+- [x] **Bug (first real test):** a finished game wasn't saved while the app kept running. Fixed twice over:
+  the GameEnd result is read before scoring (a snapshot that fails to score can't hide it), and a game
+  whose client has been gone/loading for 3 min (wall clock) is saved as "No result"
+- [x] "Open Folder" under Microsoft Store Python opens the redirected
+  `AppData\Local\Packages\PythonSoftwareFoundation.Python.3.xx_…\LocalCache\Local\Wincast\…` folder
+  (Store apps' AppData writes are virtualised; the .exe isn't affected)
+- [x] **GameEnd missed twice (2026-09-28 log):** data stopped at 34:46 right after the enemy took both
+  nexus towers; ~10 s of no answers; client closed. Now: when a snapshot fails mid-game the worker asks
+  the light `/eventdata` endpoint for GameEnd, and every change in poll outcome is logged (`poll: …`)
+- [x] Saved game confirmed from the .exe log (`saved game to …` 3 min after the client closed); F5 before that showed nothing
+- [x] History graph zoom (Henry): drag to zoom a time range, wheel zooms around the cursor, right-click / Back
+  = previous zoom, double-click / Home = whole game; time axis switches to m:ss when zoomed in
+- [x] Bigger kill ticks (2 px, ~4 % of the graph height) and objective letters (12 px)
+- [x] History list and graph in a splitter (list ~150 px by default, divider remembered); list scrolls. (Reverted once, brought back: Henry missed it)
+- [x] Real game with the .exe, 2026-09-28: result recorded (Victory)
+- [x] Hand test (Henry, 2026-09-28): hotkey change in Settings applies live (tray shows it); start with Windows from the .exe works
+
+**Phase 7 done.**
 
 ## Phase 8 — Models & updates
 
@@ -76,8 +111,9 @@ model repo are private and frozen except for bugs or a major game change.
 
 ## Phase 9 — Packaging & release
 
-- [ ] PyInstaller or Nuitka single-folder build; installer later
-- [ ] Choose a licence (MIT / Apache-2.0 / GPL) before the repo goes public
+- [x] PyInstaller single-folder build (`tools/build_exe.py`), works on Henry's PC
+- [ ] Installer (or a zip) and an app icon file
+- [x] Licence: MIT
 - [ ] Register the product with Riot's developer portal before publishing a binary
 - [ ] README screenshots, privacy statement, "not endorsed by Riot" line (done in README)
 

@@ -23,6 +23,7 @@ from PySide6.QtWidgets import QWidget
 
 from ..session import ENDED, IN_GAME
 from ..smoothing import logit
+from .. import prefs
 
 BASE_W, BASE_H = 150, 46
 TREND_MINUTES_DEFAULT = 10.0          # how much of the game the trend line shows (setting)
@@ -78,16 +79,7 @@ class OverlayWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self._apply_flags()
 
-        self.scale = min(max(float(settings.value("overlay/scale", 1.0)), 0.6), 3.0)
-        self.opacity = min(max(float(settings.value("overlay/opacity", 0.95)), 0.3), 1.0)
-        self.show_trend = str(settings.value("overlay/trend", "true")).lower() == "true"
-        try:
-            minutes = float(settings.value("overlay/trend_minutes", TREND_MINUTES_DEFAULT))
-        except (TypeError, ValueError):
-            minutes = TREND_MINUTES_DEFAULT
-        self.trend_seconds = min(max(minutes, 1.0), 60.0) * 60.0
-        self.setFixedSize(round(BASE_W * self.scale), round(BASE_H * self.scale))
-        self.setWindowOpacity(self.opacity)
+        self.apply_settings()
 
         self._save_timer = QTimer(self, singleShot=True, interval=400)
         self._save_timer.timeout.connect(self.save_position)
@@ -99,6 +91,20 @@ class OverlayWindow(QWidget):
             self._top_timer = QTimer(self, interval=3000)
             self._top_timer.timeout.connect(self._reassert_topmost)
             self._top_timer.start()
+
+    def apply_settings(self):
+        """(Re)read size, opacity and trend options -- at start and after Settings > Apply."""
+        self.scale = prefs.get(self.settings, "overlay/scale")
+        self.opacity = prefs.get(self.settings, "overlay/opacity")
+        self.show_trend = prefs.get(self.settings, "overlay/trend")
+        self.trend_seconds = prefs.get(self.settings, "overlay/trend_minutes") * 60.0
+        self.setFixedSize(round(BASE_W * self.scale), round(BASE_H * self.scale))
+        self.setWindowOpacity(self.opacity)
+        if self._history:
+            last = self._history[-1][0]
+            while self._history and self._history[0][0] < last - self.trend_seconds:
+                self._history.popleft()
+        self.update()
 
     # ------------------------------------------------------------------ lock
 

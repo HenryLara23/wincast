@@ -9,8 +9,8 @@ A live win-chance overlay for League of Legends, Summoner's Rift.
 * **Shows only what you could already see.** The Live Client API exposes the
   same information as the in-game scoreboard; Wincast turns it into one number.
 
-> Status: early development. The overlay works; tray menu and main window are
-> next. See [PLANNING.md](PLANNING.md).
+> Status: early development. Overlay, main window (Live / History / Settings)
+> and the .exe work. See [PLANNING.md](PLANNING.md).
 
 ## Run it
 
@@ -54,6 +54,11 @@ src/wincast/            the app
   ui/overlay.py         the click-through pill
   ui/hotkey.py          Ctrl+Shift+P, system-wide (Windows RegisterHotKey)
   ui/tray.py            tray icon: move/lock, quit
+  ui/mainwindow.py      the window: Live, History, Settings (Windows 7 Task Manager style)
+  ui/charts.py          green-on-black graph and gauge
+  history.py            saved games (no names), %LOCALAPPDATA%\Wincast\history
+  prefs.py              every setting, its default and limits
+  autostart.py          start with Windows (.exe only)
   ui/app.py             wiring; `python -m wincast`
   paths.py              user folders (%LOCALAPPDATA%\Wincast)
   resources/            fallback model + Data Dragon item prices, bundled
@@ -84,7 +89,9 @@ python -m pytest
 
 ## Privacy
 
-Wincast stores nothing about other players and sends nothing anywhere. The only
+Wincast sends nothing anywhere. Each game it watches is saved on your PC for the
+History tab (win-chance curve, result, your champion, objective times by team);
+no player names are stored. The only
 network requests are Riot's public Data Dragon (item prices, once per patch)
 and, if you turn it on, a check for newer models.
 

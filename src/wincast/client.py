@@ -28,6 +28,7 @@ from .paths import RESOURCES
 
 BASE = "https://127.0.0.1:2999"
 ALL_GAME_DATA = "/liveclientdata/allgamedata"
+EVENT_DATA = "/liveclientdata/eventdata"
 RIOT_PEM = RESOURCES / "riotgames.pem"
 
 OFFLINE, LOADING, DATA, ERROR = "offline", "loading", "data", "error"
@@ -52,6 +53,7 @@ class LiveClient:
         import requests
         self._requests = requests
         self.url = base.rstrip("/") + ALL_GAME_DATA
+        self.events_url = base.rstrip("/") + EVENT_DATA
         self.timeout = (1.0, timeout)                 # (connect, read)
         self.session = requests.Session()
         cert = cert if cert is not None else (RIOT_PEM if RIOT_PEM.exists() else None)
@@ -94,6 +96,22 @@ class LiveClient:
             return Poll.of(r.json())
         except ValueError:
             return Poll(LOADING, detail="not JSON yet")
+
+    def events(self):
+        """The event list alone (a much smaller reply than /allgamedata), or None.
+
+        Used when a full snapshot fails mid-game: while the nexus explodes the
+        game can stop answering the big request, and that is exactly when the
+        GameEnd event appears (seen 2026-09-28: two games closed with no GameEnd
+        ever received)."""
+        try:
+            r = self.session.get(self.events_url, timeout=(1.0, 1.5))
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            return data.get("Events") if isinstance(data, dict) else None
+        except Exception:
+            return None
 
     def close(self):
         self.session.close()

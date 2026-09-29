@@ -17,7 +17,12 @@ from __future__ import annotations
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 
+import logging
+
+from .client import ERROR
 from .session import IN_GAME, LOADING_STATE, Engine
+
+log = logging.getLogger(__name__)
 
 FAST_MS = 2000      # in game: matches the capture cadence the model was checked on
 SLOW_MS = 5000      # no game / loading / unsupported
@@ -28,10 +33,15 @@ class ScoringWorker(QObject):
     stateChanged = Signal(str)        # only when the state changes
     gameStarted = Signal(int)         # new game id
     gameEnded = Signal(object)        # the finished session.Game (curve, result, model)
+    gameFinished = Signal(object)     # a history record (dict) for a game that is over
     failed = Signal(str)              # an unexpected error; the loop keeps going
 
-    def __init__(self, engine: Engine, poll, fast_ms=FAST_MS, slow_ms=SLOW_MS):
+    def __init__(self, engine: Engine, poll, fast_ms=FAST_MS, slow_ms=SLOW_MS, source="live",
+                 events=None):
         super().__init__()
+        self.source = source
+        self.events = events              # client.events: fallback when a snapshot fails
+        self._last_kind = None
         self.engine = engine
         self.poll = poll
         self.fast_ms, self.slow_ms = fast_ms, slow_ms
@@ -51,9 +61,22 @@ class ScoringWorker(QObject):
 
     @Slot()
     def stop(self):
+        """Runs in the worker thread. The timer belongs to this thread, so it is
+        stopped and destroyed here; left for exit, Qt complains that timers
+        "cannot be stopped from another thread"."""
         self._running = False
         if self._timer is not None:
             self._timer.stop()
+            self._timer.deleteLater()      # processed as the thread's loop winds down
+            self._timer = None
+
+    def _emit_finished(self, games):
+        from .history import record_from_game
+        for done in games:
+            try:
+                self.gameFinished.emit(record_from_game(done, self.source))
+            except Exception as exc:
+                self.failed.emit(f"history record: {type(exc).__name__}: {exc}")
 
     @Slot(float)
     def setSmoothing(self, tau_s):
@@ -64,7 +87,16 @@ class ScoringWorker(QObject):
         if not self._running:
             return
         try:
-            up = self.engine.feed(self.poll())
+            poll = self.poll()
+            if poll.kind != self._last_kind:      # what the game answered, when it changes
+                log.info("poll: %s%s", poll.kind, f" ({poll.detail})" if poll.detail else "")
+                self._last_kind = poll.kind
+            up = self.engine.feed(poll)
+            if poll.kind == ERROR and self.events is not None and self.engine.game is not None:
+                ended = self.engine.feed_events(self.events())
+                if ended is not None:
+                    log.info("game end found through /eventdata: %s", ended.result)
+                    up = ended
         except Exception as exc:                  # never let the loop die
             self.failed.emit(f"{type(exc).__name__}: {exc}")
             up = self.engine.last
@@ -79,6 +111,7 @@ class ScoringWorker(QObject):
         if g is not None and g.result is not None and g.id not in self._ended_ids:
             self._ended_ids.add(g.id)
             self.gameEnded.emit(g)
+        self._emit_finished(self.engine.pop_finished())
         if self._running:
             fast = up.state in (IN_GAME, LOADING_STATE)
             self._timer.start(self.fast_ms if fast else self.slow_ms)
@@ -92,6 +125,7 @@ class ScoringRunner(QObject):
     stateChanged = Signal(str)
     gameStarted = Signal(int)
     gameEnded = Signal(object)
+    gameFinished = Signal(object)
     failed = Signal(str)
     _stopRequested = Signal()
     _smoothingRequested = Signal(float)
@@ -105,7 +139,8 @@ class ScoringRunner(QObject):
         self.thread.started.connect(self.worker.start)
         self._stopRequested.connect(self.worker.stop)
         self._smoothingRequested.connect(self.worker.setSmoothing)
-        for name in ("updated", "stateChanged", "gameStarted", "gameEnded", "failed"):
+        for name in ("updated", "stateChanged", "gameStarted", "gameEnded", "gameFinished",
+                     "failed"):
             getattr(self.worker, name).connect(getattr(self, name))
 
     def start(self):
@@ -115,9 +150,15 @@ class ScoringRunner(QObject):
         self._smoothingRequested.emit(float(tau_s))
 
     def stop(self, timeout_ms=5000):
-        """Stop polling and join the thread. A poll in flight finishes first."""
-        if not self.thread.isRunning():
-            return True
-        self._stopRequested.emit()
-        self.thread.quit()
-        return self.thread.wait(timeout_ms)
+        """Stop polling and join the thread. A poll in flight finishes first.
+        The game in progress (if any) is then handed over via gameFinished,
+        delivered directly since the thread has ended."""
+        if self.thread.isRunning():
+            self._stopRequested.emit()
+            self.thread.quit()
+            if not self.thread.wait(timeout_ms):
+                return False
+        from .history import record_from_game
+        for done in self.worker.engine.flush():
+            self.gameFinished.emit(record_from_game(done, self.worker.source))
+        return True

@@ -21,6 +21,7 @@ def main(argv=None):
     ap.add_argument("--replay", help="play a saved capture instead of reading the live game")
     ap.add_argument("--speed", type=float, default=10.0, help="replay speed (default 10x)")
     ap.add_argument("--unlocked", action="store_true", help="start with the overlay movable")
+    ap.add_argument("--window", action="store_true", help="open the main window at start")
     ap.add_argument("--quit-after", type=float, help=argparse.SUPPRESS)   # tests / smoke runs
     args = ap.parse_args(argv)
     from .ui.app import run

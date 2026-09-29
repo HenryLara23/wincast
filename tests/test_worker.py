@@ -65,5 +65,36 @@ class TestScoringRunner(unittest.TestCase):
         self.assertFalse(runner.thread.isRunning())
 
 
+    def test_error_polls_fall_back_to_eventdata_for_the_result(self):
+        from wincast.client import ERROR
+        from wincast.resolver import FixedResolver
+        from wincast.session import Engine
+        from wincast.worker import ScoringRunner
+
+        script = [Poll.of(s) for s in self.snaps[:4]] + [Poll(ERROR, detail="read timeout")] * 3 \
+            + [Poll(OFFLINE)] * 50
+        asked = []
+
+        def events():
+            asked.append(1)
+            if len(asked) < 2:
+                return None                                  # first try: nothing yet
+            return [{"EventName": "GameEnd", "EventTime": 900.0, "Result": "Win"}]
+
+        runner = ScoringRunner(Engine(FixedResolver()), lambda: script.pop(0) if script else Poll(OFFLINE),
+                               fast_ms=1, slow_ms=1, events=events)
+        ended, finished = [], []
+        runner.gameEnded.connect(ended.append)
+        runner.gameFinished.connect(finished.append)
+        loop = QEventLoop()
+        runner.gameFinished.connect(lambda _r: QTimer.singleShot(20, loop.quit))
+        QTimer.singleShot(10000, loop.quit)
+        runner.start()
+        loop.exec()
+        self.assertTrue(runner.stop())
+        self.assertEqual([g.result for g in ended], ["Win"])
+        self.assertEqual([r["result"] for r in finished], ["Win"])
+
+
 if __name__ == "__main__":
     unittest.main()

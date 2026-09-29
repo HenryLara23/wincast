@@ -28,14 +28,23 @@ def app_icon() -> QIcon:
 
 
 class Tray(QObject):
-    def __init__(self, overlay, hotkey_text: str, hotkey_ok: bool, parent=None):
+    def __init__(self, overlay, hotkey_text: str, hotkey_ok: bool, open_window=None, parent=None):
         super().__init__(parent)
         self.overlay = overlay
         self.hotkey_text = hotkey_text
+        self.open_window = open_window
         self.icon = None
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
         self.menu = QMenu()
+        if open_window is not None:
+            open_action = QAction("Open Wincast", self.menu)
+            f = open_action.font()
+            f.setBold(True)                       # the default action, as Windows shows it
+            open_action.setFont(f)
+            open_action.triggered.connect(open_window)
+            self.menu.addAction(open_action)
+            self.menu.addSeparator()
         self.lock_action = QAction(self.menu)
         self.lock_action.triggered.connect(overlay.toggle_lock)
         self.menu.addAction(self.lock_action)
@@ -48,12 +57,27 @@ class Tray(QObject):
 
         self.icon = QSystemTrayIcon(app_icon(), self)
         self.icon.setContextMenu(self.menu)
+        self.icon.activated.connect(self._activated)
         self.icon.setToolTip("Wincast: waiting for a game")
         self.icon.show()
         if not hotkey_ok:
             self.icon.showMessage("Wincast", f"{hotkey_text} isn't available, so use this "
                                   "tray icon to move or lock the overlay.",
                                   QSystemTrayIcon.MessageIcon.Information, 6000)
+
+    def _activated(self, reason):
+        if self.open_window and reason in (QSystemTrayIcon.ActivationReason.Trigger,
+                                           QSystemTrayIcon.ActivationReason.DoubleClick):
+            self.open_window()
+
+    def set_hotkey_text(self, text):
+        self.hotkey_text = text
+        if self.icon is not None:
+            self._lock_text(self.overlay.locked)
+
+    def notify(self, text):
+        if self.icon is not None:
+            self.icon.showMessage("Wincast", text, QSystemTrayIcon.MessageIcon.Information, 5000)
 
     @Slot(bool)
     def _lock_text(self, locked):

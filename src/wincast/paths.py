@@ -1,6 +1,7 @@
 """Where Wincast keeps things on the user's machine."""
 
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -37,3 +38,30 @@ def setup_ddragon_cache() -> Path:
             shutil.copy2(f, cache / f.name)
     os.environ["DDRAGON_CACHE"] = str(cache)
     return cache
+
+
+STORE_PYTHON = re.compile(r"(PythonSoftwareFoundation\.Python\.\d+\.\d+)_(?:[^\\/]*__)?([a-z0-9]{13})",
+                          re.IGNORECASE)
+
+
+def explorer_path(p: Path, executable: str = None, local_appdata: str = None) -> Path:
+    """Where File Explorer can actually find `p`.
+
+    Python from the Microsoft Store is a packaged app: Windows silently redirects
+    its writes under %LOCALAPPDATA% to
+    %LOCALAPPDATA%\\Packages\\<package>\\LocalCache\\Local\\... . Python sees
+    the folder where it asked for it, but Explorer doesn't ("Location is not
+    available"). The built .exe isn't packaged, so this only matters for
+    `python -m wincast` with Store Python."""
+    executable = executable or sys.executable
+    local_appdata = local_appdata or os.environ.get("LOCALAPPDATA", "")
+    m = STORE_PYTHON.search(executable or "")
+    if not m or not local_appdata:
+        return p
+    try:
+        rel = Path(p).relative_to(local_appdata)
+    except ValueError:
+        return p
+    redirected = Path(local_appdata) / "Packages" / f"{m.group(1)}_{m.group(2)}" / \
+        "LocalCache" / "Local" / rel
+    return redirected if redirected.exists() else p

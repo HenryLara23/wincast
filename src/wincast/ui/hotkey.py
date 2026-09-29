@@ -76,6 +76,13 @@ class GlobalHotkey(QObject):
         self._helper = None
         self._filter = None
 
+    def set_text(self, text: str) -> bool:
+        """Switch to another key combination (from Settings)."""
+        parse(text)                                  # raises ValueError if unusable
+        self.unregister()
+        self.text = text
+        return self.register()
+
     def register(self) -> bool:
         if sys.platform != "win32":
             return False
@@ -83,11 +90,12 @@ class GlobalHotkey(QObject):
             import ctypes
             from ctypes import wintypes
             mods, vk = parse(self.text)
-            self._helper = QWidget()
-            self._helper.setWindowTitle("Wincast hotkey")
-            hwnd = wintypes.HWND(int(self._helper.winId()))    # forces a native window; never shown
-            self._filter = _Filter(self.HOTKEY_ID, self.activated.emit)
-            QCoreApplication.instance().installNativeEventFilter(self._filter)
+            if self._helper is None:                 # one helper window + filter, reused
+                self._helper = QWidget()
+                self._helper.setWindowTitle("Wincast hotkey")
+                self._filter = _Filter(self.HOTKEY_ID, self.activated.emit)
+                QCoreApplication.instance().installNativeEventFilter(self._filter)
+            hwnd = wintypes.HWND(int(self._helper.winId()))    # native window; never shown
             user32 = ctypes.windll.user32
             user32.RegisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
             self.registered = bool(user32.RegisterHotKey(hwnd, self.HOTKEY_ID,
