@@ -1,10 +1,11 @@
-# Files that are checked byte for byte (CORE_MANIFEST.json hashes, SHA256SUMS,
-# the golden-game test) must never have their line endings changed by git.
-# Windows git (and GitHub's Windows runners) otherwise turn LF into CRLF on
-# checkout, and the vendored code then "differs" from what the model repo shipped.
+# Order matters: when several lines match a file, the LAST one wins.
+
+# Everything: text files stored with LF and checked out with LF on every OS
+# (Python doesn't care, and nothing gets rewritten behind our back on Windows).
+*                        text=auto eol=lf
+
+# Files checked byte for byte (CORE_MANIFEST.json hashes, SHA256SUMS, the
+# golden-game test): never converted at all. Must come AFTER the line above.
 src/lolwp/**             -text
 src/wincast/resources/** -text
 tests/fixtures/**        -text
-
-# Everything else: normal text handling, LF in the repository
-*                        text=auto

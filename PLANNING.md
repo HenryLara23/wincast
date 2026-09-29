@@ -137,6 +137,9 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 - [x] First Actions run (manual, 16.19) failed after ~1 min; likely cause: Windows checkout turned LF into CRLF,
   so the byte-exact manifest test failed. Fix: `.gitattributes` (`-text` for vendored code, resources,
   fixtures) + `core.autocrlf false` on the runner; actions bumped to checkout@v5 / setup-python@v6 (Node 24)
+- [x] Second run failed the same way: in `.gitattributes` the LAST matching line wins, and `* text=auto`
+  was last, overriding `-text`. Reordered (catch-all first, `* text=auto eol=lf`). Verified by cloning with
+  `core.autocrlf=true core.eol=crlf`: all hashes match after the fix, all six differed before.
 - [ ] Re-run → v16.19 published; then Check Now from the released .exe
 - [ ] (later) warn when the newest model's patch is behind Riot's current patch
 
