@@ -38,7 +38,7 @@ def _drawn_icon() -> QIcon:
 
 
 class Tray(QObject):
-    def __init__(self, overlay, hotkey_text: str, hotkey_ok: bool, open_window=None, parent=None):
+    def __init__(self, overlay, hotkey_text: str, open_window=None, parent=None):
         super().__init__(parent)
         self.overlay = overlay
         self.hotkey_text = hotkey_text
@@ -69,11 +69,7 @@ class Tray(QObject):
         self.icon.setContextMenu(self.menu)
         self.icon.activated.connect(self._activated)
         self.icon.setToolTip("Wincast: waiting for a game")
-        self.icon.show()
-        if not hotkey_ok:
-            self.icon.showMessage("Wincast", f"{hotkey_text} isn't available, so use this "
-                                  "tray icon to move or lock the overlay.",
-                                  QSystemTrayIcon.MessageIcon.Information, 6000)
+        self.icon.show()                          # no balloon pop-ups, ever: see mainwindow
 
     def _activated(self, reason):
         if self.open_window and reason in (QSystemTrayIcon.ActivationReason.Trigger,
@@ -84,10 +80,6 @@ class Tray(QObject):
         self.hotkey_text = text
         if self.icon is not None:
             self._lock_text(self.overlay.locked)
-
-    def notify(self, text):
-        if self.icon is not None:
-            self.icon.showMessage("Wincast", text, QSystemTrayIcon.MessageIcon.Information, 5000)
 
     @Slot(bool)
     def _lock_text(self, locked):

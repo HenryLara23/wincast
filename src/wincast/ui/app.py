@@ -25,6 +25,7 @@ from ..worker import ScoringRunner
 from .hotkey import GlobalHotkey
 from .mainwindow import MainWindow
 from .overlay import OverlayWindow
+from .single import SingleInstance
 from .tray import Tray, app_icon
 
 log = logging.getLogger("wincast")
@@ -42,10 +43,19 @@ def run(args) -> int:
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(APP_NAME)
-    app.setQuitOnLastWindowClosed(False)            # windows hide; the app lives in the tray
+    app.setQuitOnLastWindowClosed(False)            # the main window's X decides (see closeEvent)
     app.setWindowIcon(app_icon())
     classic_style(app)
     settings = QSettings()
+
+    # one copy at a time (replays are test runs and may sit next to the real one)
+    single = None
+    if not args.replay:
+        single = SingleInstance()
+        if single.already_running():
+            log.info("Wincast is already running: asked it to show its window")
+            return 0
+        single.listen()
     log.info("Wincast %s starting", __version__)
 
     models = None
@@ -109,12 +119,13 @@ def run(args) -> int:
     log.info("hotkey %s: %s", hotkey_text, "registered" if hotkey_ok else "not available")
     window.hotkey = hotkey
 
-    tray = Tray(overlay, hotkey_text, hotkey_ok, open_window=window.show_and_raise)
+    window.set_hotkey_status(hotkey_ok or sys.platform != "win32", hotkey_text)
+
+    tray = Tray(overlay, hotkey_text, open_window=window.show_and_raise)
     runner.updated.connect(tray.show_update)
     window.tray = tray
-    if tray.icon is None:                           # no tray: closing the window must quit
-        app.setQuitOnLastWindowClosed(True)
-        window.closeEvent = lambda e: (e.accept(), app.quit())
+    if single is not None:
+        single.activated.connect(window.show_and_raise)
 
     # First run: nowhere saved yet, so start unlocked and let the user place it.
     first_run = not overlay.has_saved_position()
@@ -128,6 +139,8 @@ def run(args) -> int:
         runner.stop()                                # also saves a game still in progress
         overlay.save_position()
         hotkey.unregister()
+        if single is not None:
+            single.close()
         log.info("stopped")
 
     app.aboutToQuit.connect(shutdown)

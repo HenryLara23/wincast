@@ -5,7 +5,8 @@
     ...
     Status: In game | Win chance: 73% | Games recorded: 12 | Overlay: locked
 
-Closing it only hides it; Wincast keeps running in the tray.
+Closing it quits Wincast, unless "Keep running in the tray" is on: then it only
+hides. Wincast never shows pop-up notifications; problems show in the window.
 """
 
 from __future__ import annotations
@@ -107,7 +108,6 @@ class MainWindow(QMainWindow):
         self.tray = None                   # set by the app: Tray
         self.runner = None                 # set by the app: ScoringRunner
         self._live_game = 0
-        self._told_about_tray = False
 
         self.setWindowTitle(f"{APP_NAME}")
         self.resize(640, 560)
@@ -438,6 +438,11 @@ class MainWindow(QMainWindow):
         self.key_edit = QKeySequenceEdit()
         self.key_edit.setMaximumSequenceLength(1)
         f.addRow("Move/lock hotkey:", self.key_edit)
+        self.hotkey_note = QLabel()                # shown only when the hotkey can't be used
+        self.hotkey_note.setWordWrap(True)
+        self.hotkey_note.setStyleSheet("color: #b00000")
+        self.hotkey_note.hide()
+        f.addRow("", self.hotkey_note)
         for box in (self.sp_scale, self.sp_opacity, self.sp_trend):
             box.setMaximumWidth(110)
         self.key_edit.setMaximumWidth(180)
@@ -464,6 +469,8 @@ class MainWindow(QMainWindow):
         v.addWidget(self.chk_autostart)
         self.chk_open_on_start = QCheckBox("Open this window when Wincast starts")
         v.addWidget(self.chk_open_on_start)
+        self.chk_close_to_tray = QCheckBox("Keep running in the tray when I close this window")
+        v.addWidget(self.chk_close_to_tray)
         lay.addWidget(g)
 
         lay.addStretch(1)
@@ -482,7 +489,8 @@ class MainWindow(QMainWindow):
         for sig in (self.sp_scale.valueChanged, self.sp_opacity.valueChanged,
                     self.chk_trend.toggled, self.sp_trend.valueChanged,
                     self.key_edit.keySequenceChanged, self.sp_smooth.valueChanged,
-                    self.chk_autostart.toggled, self.chk_open_on_start.toggled):
+                    self.chk_autostart.toggled, self.chk_open_on_start.toggled,
+                    self.chk_close_to_tray.toggled):
             sig.connect(lambda *_: self.btn_apply.setEnabled(True))
         self.chk_trend.toggled.connect(self.sp_trend.setEnabled)
         return w
@@ -498,6 +506,7 @@ class MainWindow(QMainWindow):
         self.sp_smooth.setValue(prefs.get(s, "smoothing_s"))
         self.chk_autostart.setChecked(autostart.enabled())
         self.chk_open_on_start.setChecked(prefs.get(s, "general/open_window_on_start"))
+        self.chk_close_to_tray.setChecked(prefs.get(s, "general/close_to_tray"))
         self.btn_apply.setEnabled(False)
 
     def hotkey_text_from_form(self):
@@ -521,6 +530,7 @@ class MainWindow(QMainWindow):
         prefs.put(s, "overlay/trend_minutes", self.sp_trend.value())
         prefs.put(s, "smoothing_s", float(self.sp_smooth.value()))
         prefs.put(s, "general/open_window_on_start", self.chk_open_on_start.isChecked())
+        prefs.put(s, "general/close_to_tray", self.chk_close_to_tray.isChecked())
         self.act_open_on_start.setChecked(self.chk_open_on_start.isChecked())
         if autostart.supported():
             autostart.set_enabled(self.chk_autostart.isChecked())
@@ -528,10 +538,7 @@ class MainWindow(QMainWindow):
             prefs.put(s, "hotkey", text)
             self.overlay.hotkey_text = text
             if self.hotkey is not None:
-                ok = self.hotkey.set_text(text)
-                if not ok and sys.platform == "win32":
-                    QMessageBox.information(self, APP_NAME, f"{text} is in use by another app. "
-                                            "The tray menu can still move the overlay.")
+                self.set_hotkey_status(self.hotkey.set_text(text) or sys.platform != "win32", text)
             if self.tray is not None:
                 self.tray.set_hotkey_text(text)
         s.sync()
@@ -550,7 +557,15 @@ class MainWindow(QMainWindow):
         self.key_edit.setKeySequence(QKeySequence(d["hotkey"]))
         self.sp_smooth.setValue(d["smoothing_s"])
         self.chk_open_on_start.setChecked(d["general/open_window_on_start"])
+        self.chk_close_to_tray.setChecked(d["general/close_to_tray"])
         self.btn_apply.setEnabled(True)
+
+    def set_hotkey_status(self, ok: bool, text: str):
+        """Say in the Settings tab (not a pop-up) when the hotkey couldn't be registered."""
+        self.hotkey_note.setText("" if ok else
+                                 f"{text} is taken by another app, so it does nothing right now. "
+                                 "Pick another, or use the tray icon's menu to move the overlay.")
+        self.hotkey_note.setVisible(not ok)
 
     # ================================================================== models
 
@@ -735,9 +750,6 @@ class MainWindow(QMainWindow):
         self.refresh_models()
         if installed is not None:
             self.update_status.setText(f"Installed {installed.name}; used from the next game.")
-            if self.tray is not None:
-                self.tray.notify(f"New model installed (patch {installed.patch}). "
-                                 "It's used from your next game.")
         elif rel is None:
             self.update_status.setText("No models published yet for this version of Wincast.")
         elif updates.is_newer(rel, self.models):
@@ -790,9 +802,11 @@ class MainWindow(QMainWindow):
         self.activateWindow()
 
     def closeEvent(self, e):
-        # keep running in the tray; say so the first time
-        e.ignore()
-        self.hide()
-        if not self._told_about_tray and self.tray is not None:
-            self._told_about_tray = True
-            self.tray.notify("Wincast is still running in the tray. Right-click it to quit.")
+        has_tray = self.tray is not None and self.tray.icon is not None
+        if has_tray and prefs.get(self.settings, "general/close_to_tray"):
+            e.ignore()                             # just hide; the tray icon brings it back
+            self.hide()
+            return
+        e.accept()
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()

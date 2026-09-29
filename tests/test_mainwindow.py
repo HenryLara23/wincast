@@ -242,10 +242,38 @@ class TestMainWindow(unittest.TestCase):
         finally:
             updates.check = orig
 
-    def test_close_hides_instead_of_quitting(self):
+    def _close_with_tray(self, close_to_tray):
+        from unittest import mock
+
+        class FakeTray:
+            icon = object()
+        self.win.tray = FakeTray()
+        prefs.put(self.settings, "general/close_to_tray", close_to_tray)
         self.win.show()
-        self.win.close()
+        with mock.patch("PySide6.QtWidgets.QApplication.quit") as quit_:
+            self.win.close()
+        return quit_
+
+    def test_close_quits_by_default(self):
+        quit_ = self._close_with_tray(False)
+        quit_.assert_called_once()
+
+    def test_close_hides_when_close_to_tray_is_on(self):
+        quit_ = self._close_with_tray(True)
+        quit_.assert_not_called()
         self.assertFalse(self.win.isVisible())
+
+    def test_close_to_tray_setting_round_trips(self):
+        self.win.chk_close_to_tray.setChecked(True)
+        self.win.apply_settings()
+        self.assertTrue(prefs.get(self.settings, "general/close_to_tray"))
+
+    def test_hotkey_problem_shows_in_settings_not_a_popup(self):
+        self.win.set_hotkey_status(False, "Ctrl+Shift+P")
+        self.assertFalse(self.win.hotkey_note.isHidden())
+        self.assertIn("taken by another app", self.win.hotkey_note.text())
+        self.win.set_hotkey_status(True, "Ctrl+Shift+P")
+        self.assertTrue(self.win.hotkey_note.isHidden())
 
 
 class TestPrefs(unittest.TestCase):

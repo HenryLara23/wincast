@@ -12,6 +12,7 @@ DEFAULTS = {
     "hotkey": "Ctrl+Shift+P",
     "smoothing_s": 5.0,              # 0 .. 30 (0 = raw model output)
     "general/open_window_on_start": True,
+    "general/close_to_tray": False,  # X hides the window instead of quitting
     "models/auto_update": False,     # check GitHub at startup and install new models
     "models/pinned": "",             # a model name to always use; "" = the newest
 }

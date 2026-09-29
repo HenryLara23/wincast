@@ -146,7 +146,8 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 
 ## Loose ends (audit 2026-09-29)
 
-- [ ] Commit the private repo's Phase 8 server changes (`lolmodel/scripts/publish_release.py`, its test,
+- [x] X quits (Settings: "Keep running in the tray" hides instead); no pop-up notifications (hotkey trouble shows in Settings); only one Wincast runs, a second launch shows the first's window
+- [x] Commit the private repo's Phase 8 server changes (`lolmodel/scripts/publish_release.py`, its test,
   `deploy/lolwp-publish.{service,timer}`, `deploy/lolwp-train.timer`, `deploy/README.md`, root `.gitignore`).
   The server already runs them; the repo doesn't have them yet.
 - [ ] Fine-grained token expiry: when it lapses, the daily upload fails quietly (`journalctl -u lolwp-publish`).

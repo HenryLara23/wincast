@@ -57,6 +57,10 @@ RestartApplications=no
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Messages]
+; the stock text sounds like it deletes everything; the data question comes next
+ConfirmUninstall=Uninstall %1?%n%nNext you can choose whether to keep your game history, models and settings.
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
