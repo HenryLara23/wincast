@@ -110,6 +110,52 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(self.resolver.calls, 2)
         self.assertEqual(self.engine.last_game.id, first)
 
+    def test_disguises_do_not_split_the_game(self):
+        """Neeko's passive makes the API report her champion as whoever she's disguised
+        as (an ally, a minion). Seen live 2026-09-30: one game saved as 38."""
+        disguises = ["Ezreal", "Blue Caster Minion", "Neeko", "Blitzcrank", "Blue Melee Minion"]
+        self.feed(self.snaps[0])
+        gid, champ = self.engine.game.id, self.engine.game.champion
+        me = self.snaps[0]["activePlayer"]["riotId"]
+        for i, s in enumerate(self.snaps[1:6]):
+            s = copy.deepcopy(s)
+            for p in s["allPlayers"]:
+                if p["riotId"] == me:                           # my champion "changes"
+                    p["championName"] = disguises[i]
+                elif p["team"] != s["allPlayers"][0]["team"]:   # so does an enemy's
+                    p["championName"] = disguises[-1 - i]
+            up = self.feed(s)
+            self.assertEqual((up.state, up.game_id), (IN_GAME, gid))
+        self.assertEqual(self.resolver.calls, 1)
+        self.assertEqual(self.engine.pop_finished(), [])
+        self.assertEqual(self.engine.game.champion, champ)      # history keeps the real one
+        self.assertEqual(len(self.engine.game.curve), 6)
+
+    def test_client_closing_without_game_end_is_logged_with_evidence(self):
+        """Two losses on 2026-09-30 were saved with no result: the game went from
+        answering to gone with no GameEnd. The log must say what the last seconds held."""
+        now = [100.0]
+        eng = Engine(self.resolver, tau_s=0, clock=lambda: now[0])
+        for s in self.snaps[:3]:
+            eng.feed(Poll.of(s))
+        now[0] += 4.5
+        with self.assertLogs("wincast.session", "INFO") as logs:
+            eng.feed(Poll(OFFLINE, detail="no game client"))
+            eng.feed(Poll(OFFLINE, detail="no game client"))         # said once, not per poll
+        text = "\n".join(logs.output)
+        self.assertEqual(text.count("without a GameEnd"), 1)
+        self.assertIn("4.5 s after the last snapshot", text)
+        self.assertIn("last events:", text)
+
+    def test_skipped_snapshots_are_logged(self):
+        bad = copy.deepcopy(self.snaps[2])
+        bad["allPlayers"][0]["items"] = [{"itemID": "not-a-number", "count": None}]
+        bad["allPlayers"][0]["level"] = "?"                           # can't be scored
+        self.feed(self.snaps[1])
+        with self.assertLogs("wincast.session", "WARNING") as logs:
+            self.feed(bad)
+        self.assertIn("skipped a snapshot", logs.output[0])
+
     def test_clock_going_back_is_a_new_game(self):
         self.feed(self.snaps[10])
         first = self.engine.game.id

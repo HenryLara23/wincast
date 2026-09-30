@@ -146,6 +146,8 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 
 ## Loose ends (audit 2026-09-29)
 
+- [x] 2026-09-30: Neeko's disguise split one game into 37 (roster included champions); roster is now team + name
+- [ ] 2026-09-30: two games (Syndra, Neeko loss) saved with no result: client went from answering to gone with no GameEnd. Cause not proven (client closing within one 2 s poll vs. final snapshots failing to score). Diagnostics now logged ("closed without a GameEnd", "skipped a snapshot"); read the log after the next loss, then fix
 - [x] No model nagging (models update only via the Models tab / its opt-in startup check). Last-season app note on the Live tab from Jan 15 of the next season (offline, clock + version). Help: Check for Updates / Report a Problem / Open Log Folder; About links the repo
 - [x] X quits (Settings: "Keep running in the tray" hides instead); no pop-up notifications (hotkey trouble shows in Settings); only one Wincast runs, a second launch shows the first's window
 - [x] Commit the private repo's Phase 8 server changes (`lolmodel/scripts/publish_release.py`, its test,

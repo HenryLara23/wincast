@@ -14,9 +14,11 @@ Rules that matter
   * The model and item prices are resolved ONCE, when a game is first seen, and
     kept for that game even if a newer model appears (planning: never swap
     mid-game).
-  * A game is identified by its roster (team, champion, name for all ten). If the
+  * A game is identified by its roster (team and name for all ten). If the
     client drops and comes back with the same roster -- a crash and reconnect --
-    it is the SAME game: curve, smoothing and model carry on.
+    it is the SAME game: curve, smoothing and model carry on. Champions are NOT
+    part of it: Neeko's disguise makes the API report her as whoever she copies
+    (an ally, a minion), which once split a game into 38.
   * A transient error (timeout during a hitch) changes nothing.
   * One bad snapshot never ends a game: the last good number stays up.
 """
@@ -24,6 +26,7 @@ Rules that matter
 from __future__ import annotations
 
 from collections import Counter
+import logging
 import time
 from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional, Tuple
@@ -32,6 +35,8 @@ from .client import DATA, ERROR, LOADING, OFFLINE, Poll
 from .smoothing import LogitEMA
 
 from lolwp.features import live_features as live
+
+log = logging.getLogger(__name__)
 
 NO_GAME, LOADING_STATE, UNSUPPORTED, IN_GAME, ENDED = (
     "no_game", "loading", "unsupported", "in_game", "ended")
@@ -74,6 +79,8 @@ class Game:
     game_mode: str = ""
     started_wall: float = field(default_factory=time.time)
     events: list = field(default_factory=list)         # the live API's event list, latest
+    last_data_clock: float = 0.0                        # engine clock at the last snapshot
+    gone_logged: bool = False                           # "closed without a GameEnd" said once
     name_team: dict = field(default_factory=dict)      # in memory only: never saved
     finished: bool = False                              # handed to history already
 
@@ -97,8 +104,9 @@ def my_team(data) -> Optional[str]:
 
 
 def roster(data) -> Tuple:
-    return tuple(sorted((p.get("team") or "", p.get("championName") or "",
-                         p.get("riotId") or p.get("summonerName") or "")
+    """Who is playing, on which side. Not champions: those can change mid-game
+    (Neeko's disguise); a same-roster rematch is caught by the clock going back."""
+    return tuple(sorted((p.get("team") or "", p.get("riotId") or p.get("summonerName") or "")
                         for p in data.get("allPlayers") or []))
 
 
@@ -208,8 +216,20 @@ class Engine:
             self._gone_since = None
 
     def _client_gone(self):
-        if self.game is not None and self.game.result is not None:
-            self.last_game, self.game = self.game, None
+        g = self.game
+        if g is not None and g.result is not None:
+            self.last_game, self.game = g, None
+        elif g is not None and not g.gone_logged:
+            # Evidence for games that end with no result (seen twice on 2026-09-30):
+            # did the client close right after the last snapshot, or were the final
+            # snapshots failing to score?
+            g.gone_logged = True
+            tail = [f"{e.get('EventName')}@{float(e.get('EventTime') or 0):.0f}"
+                    for e in g.events[-4:]]
+            log.info("game %d: client closed without a GameEnd, %.1f s after the last snapshot "
+                     "(game time %.0f s, %d skipped snapshots); last events: %s",
+                     g.id, self.clock() - g.last_data_clock, g.last_t, g.bad_snapshots,
+                     ", ".join(tail) or "none")
 
     def _data(self, data) -> Update:
         ok, why = live.game_check(data)
@@ -231,12 +251,18 @@ class Engine:
             return self._from_game(ENDED)
 
         g.events = (data.get("events") or {}).get("Events") or []
+        g.last_data_clock = self.clock()
+        g.gone_logged = False                     # it answered again (a reconnect)
         result = game_result(data)                # before scoring: a snapshot that fails
         try:                                      # to score must not hide the result
             x = live.extract(data, g.db, g.unknown_events)
             p_blue = float(g.model.predict_one(x))
         except Exception as exc:                  # keep the last good number up
             g.bad_snapshots += 1
+            if g.bad_snapshots <= 5 or result is not None:
+                log.warning("game %d: skipped a snapshot at game time %.0f s (%s: %s)%s",
+                            g.id, t, type(exc).__name__, exc,
+                            " -- it had the GameEnd" if result is not None else "")
             if result is not None:
                 g.result = result
                 self._retire(g)
