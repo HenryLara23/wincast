@@ -95,6 +95,42 @@ class TestScoringRunner(unittest.TestCase):
         self.assertEqual([g.result for g in ended], ["Win"])
         self.assertEqual([r["result"] for r in finished], ["Win"])
 
+    def test_game_end_between_snapshots_is_caught(self):
+        """After a defeat the client closes within ~1 s of GameEnd (Viego game,
+        2026-10-01: GameEnd at 1571 s, last 2 s snapshot at 1569 s, then gone).
+        The quick /eventdata check between snapshots must catch it."""
+        from wincast.resolver import FixedResolver
+        from wincast.session import Engine
+        from wincast.worker import ScoringRunner
+
+        snaps = [Poll.of(s) for s in self.snaps[:4]]
+        served = []
+
+        def poll():
+            if snaps:
+                served.append(1)
+                return snaps.pop(0)
+            return Poll(OFFLINE)                             # the client is already gone
+
+        def events():
+            if len(served) < 4:
+                return []
+            return [{"EventName": "GameEnd", "EventTime": 1571.0, "Result": "Lose"}]
+
+        runner = ScoringRunner(Engine(FixedResolver(GOLDEN_MODEL)), poll, fast_ms=400, slow_ms=400,
+                               events=events, events_ms=20)
+        ended, finished = [], []
+        runner.gameEnded.connect(ended.append)
+        runner.gameFinished.connect(finished.append)
+        loop = QEventLoop()
+        runner.gameFinished.connect(lambda _r: QTimer.singleShot(20, loop.quit))
+        QTimer.singleShot(10000, loop.quit)
+        runner.start()
+        loop.exec()
+        self.assertTrue(runner.stop())
+        self.assertEqual([g.result for g in ended], ["Lose"])
+        self.assertEqual([r["result"] for r in finished], ["Lose"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -26,6 +26,9 @@ log = logging.getLogger(__name__)
 
 FAST_MS = 2000      # in game: matches the capture cadence the model was checked on
 SLOW_MS = 5000      # no game / loading / unsupported
+EVENTS_MS = 250     # in game, between snapshots: the small /eventdata, for GameEnd only.
+                    # After a defeat the client closes within ~1 s of GameEnd, between two
+                    # 2 s snapshots (seen 2026-10-01; wins linger 6+ s on the Victory screen).
 
 
 class ScoringWorker(QObject):
@@ -37,7 +40,7 @@ class ScoringWorker(QObject):
     failed = Signal(str)              # an unexpected error; the loop keeps going
 
     def __init__(self, engine: Engine, poll, fast_ms=FAST_MS, slow_ms=SLOW_MS, source="live",
-                 events=None):
+                 events=None, events_ms=EVENTS_MS):
         super().__init__()
         self.source = source
         self.events = events              # client.events: fallback when a snapshot fails
@@ -46,6 +49,8 @@ class ScoringWorker(QObject):
         self.poll = poll
         self.fast_ms, self.slow_ms = fast_ms, slow_ms
         self._timer = None
+        self.events_ms = events_ms
+        self._ev_timer = None
         self._running = False
         self._last_state = None
         self._last_game_id = 0
@@ -58,6 +63,10 @@ class ScoringWorker(QObject):
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._tick)
         self._timer.start(0)
+        if self.events is not None:
+            self._ev_timer = QTimer(self)
+            self._ev_timer.timeout.connect(self._events_tick)
+            self._ev_timer.start(self.events_ms)
 
     @Slot()
     def stop(self):
@@ -69,6 +78,10 @@ class ScoringWorker(QObject):
             self._timer.stop()
             self._timer.deleteLater()      # processed as the thread's loop winds down
             self._timer = None
+        if self._ev_timer is not None:
+            self._ev_timer.stop()
+            self._ev_timer.deleteLater()
+            self._ev_timer = None
 
     def _emit_finished(self, games):
         from .history import record_from_game
@@ -100,6 +113,28 @@ class ScoringWorker(QObject):
         except Exception as exc:                  # never let the loop die
             self.failed.emit(f"{type(exc).__name__}: {exc}")
             up = self.engine.last
+        self._publish(up)
+        if self._running:
+            fast = up.state in (IN_GAME, LOADING_STATE)
+            self._timer.start(self.fast_ms if fast else self.slow_ms)
+
+    @Slot()
+    def _events_tick(self):
+        """Between snapshots, while a game is on: is there a GameEnd yet?"""
+        g = self.engine.game
+        if (not self._running or g is None or g.result is not None
+                or self.engine.last.state != IN_GAME):
+            return
+        try:
+            ended = self.engine.feed_events(self.events())
+        except Exception as exc:
+            self.failed.emit(f"eventdata: {type(exc).__name__}: {exc}")
+            return
+        if ended is not None:
+            log.info("game end found between snapshots: %s", ended.result)
+            self._publish(ended)
+
+    def _publish(self, up):
         if up.game_id and up.game_id != self._last_game_id:
             self._last_game_id = up.game_id
             self.gameStarted.emit(up.game_id)
@@ -112,9 +147,6 @@ class ScoringWorker(QObject):
             self._ended_ids.add(g.id)
             self.gameEnded.emit(g)
         self._emit_finished(self.engine.pop_finished())
-        if self._running:
-            fast = up.state in (IN_GAME, LOADING_STATE)
-            self._timer.start(self.fast_ms if fast else self.slow_ms)
 
 
 class ScoringRunner(QObject):
