@@ -152,7 +152,8 @@ python -m pytest
 ## Privacy
 
 Wincast sends nothing anywhere. Each game it watches is saved on your PC for the
-History tab (win-chance curve, result, your champion, objective times by team);
+History tab (win-chance curve, result, your champion, objective times by team;
+spectated games and replays aren't saved);
 no player names are stored. The only
 network requests are Riot's public Data Dragon (item prices, once per patch)
 and GitHub, only when you press Check Now or turn on the startup check.

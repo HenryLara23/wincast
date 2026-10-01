@@ -146,6 +146,7 @@ mid-patch releases) with the PREVIOUS patch's last model built in. App auto-upda
 
 ## Loose ends (audit 2026-09-29)
 
+- [x] 2026-10-01: spectated games / replays no longer saved to History (no player on this PC; result was blue's)
 - [x] 2026-09-30: Neeko's disguise split one game into 37 (roster included champions); roster is now team + name
 - [x] 2026-10-01: losses saved with no result. Cause (Viego game + its replay): after a defeat the client closes within ~1 s of GameEnd, between two 2 s snapshots; wins linger 6+ s. Fix: poll the small /eventdata every 250 ms between snapshots while in game
 - [x] No model nagging (models update only via the Models tab / its opt-in startup check). Last-season app note on the Live tab from Jan 15 of the next season (offline, clock + version). Help: Check for Updates / Report a Problem / Open Log Folder; About links the repo

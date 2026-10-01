@@ -156,6 +156,23 @@ class TestEngine(unittest.TestCase):
             self.feed(bad)
         self.assertIn("skipped a snapshot", logs.output[0])
 
+    def test_spectated_games_and_replays_are_not_saved(self):
+        """A replay (or spectating) has no player on this PC; its result is blue's,
+        not yours. The overlay still works, but History is for your own games."""
+        def watching(s):
+            s = copy.deepcopy(s)
+            s["activePlayer"] = {}
+            return s
+        for s in self.snaps[:6]:
+            self.assertEqual(self.feed(watching(s)).state, IN_GAME)
+        up = self.feed(watching(with_game_end(self.snaps[5])))
+        self.assertEqual((up.state, up.result), (ENDED, "Win"))
+        self.assertEqual(self.engine.pop_finished(), [])
+        for s in self.snaps[:3]:                                    # a long one, then quitting
+            self.feed(watching(renamed(s, "w")))
+        self.engine.game.last_t = 999.0
+        self.assertEqual(self.engine.flush(), [])
+
     def test_clock_going_back_is_a_new_game(self):
         self.feed(self.snaps[10])
         first = self.engine.game.id

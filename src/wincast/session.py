@@ -21,6 +21,8 @@ Rules that matter
     (an ally, a minion), which once split a game into 38.
   * A transient error (timeout during a hitch) changes nothing.
   * One bad snapshot never ends a game: the last good number stays up.
+  * Spectated games and replays (no player on this PC) are scored for the overlay
+    but never handed to the history.
 """
 
 from __future__ import annotations
@@ -188,6 +190,9 @@ class Engine:
 
     def _retire(self, g: Game):
         if g.finished or not g.curve:
+            return
+        if g.team is None:                        # spectating or a replay: not your game,
+            g.finished = True                     # and its result is blue's, not yours
             return
         if g.result is not None or g.last_t >= MIN_UNFINISHED_S:
             g.finished = True
